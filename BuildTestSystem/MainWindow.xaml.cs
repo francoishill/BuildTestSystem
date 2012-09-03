@@ -49,6 +49,7 @@ namespace BuildTestSystem
 		{
 			tmpMainListbox.Items.Clear();
 			var applicationlist = OnlineSettings.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+			applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
 			foreach (var app in applicationlist)
 			{
 				//tmpMainListbox.Items.Add(app);
