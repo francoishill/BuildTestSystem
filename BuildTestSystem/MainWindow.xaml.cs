@@ -19,6 +19,9 @@ using Microsoft.Build.Execution;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
 using System.Threading.Tasks;
+using System.Windows.Shell;
+using Microsoft.WindowsAPICodePack.Taskbar;
+using System.Windows.Interop;
 
 namespace BuildTestSystem
 {
@@ -84,6 +87,9 @@ namespace BuildTestSystem
 					buildapp.LastBuildResult = null;
 				}
 
+				TaskbarManager.Instance.SetProgressValue(0, items.Count);
+				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+
 				for (int i = 0; i < items.Count; i++)
 				//Parallel.For(0, items.Count - 1, (i) =>
 				{
@@ -93,11 +99,20 @@ namespace BuildTestSystem
 					string err = buildapp.PerformBuild();
 					Logging.LogInfoToFile(string.Format("Duration to build {0} was {1} seconds.", buildapp.ApplicationName, sw.Elapsed.TotalSeconds), Logging.ReportingFrequencies.Daily, "BuildTestSystem", "Benchmarks");
 					if (err != null)
+					{
 						appswithErrors.Add(buildapp.ApplicationName);
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+					}
+					TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
 				}//);
 				if (appswithErrors.Count > 0)
-					UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
-						string.Join(Environment.NewLine, appswithErrors));
+				{
+					TaskbarManager.Instance.SetProgressValue(100, 100);
+					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
+					//    string.Join(Environment.NewLine, appswithErrors));
+				}
+				else
+					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
 				HideIndeterminateProgress(true);
 				busybuilding = false;
 			},
