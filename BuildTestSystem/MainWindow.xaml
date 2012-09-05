@@ -54,6 +54,8 @@
 											  Click='contextmenuitemRebuildThisApplication' />
 									<MenuItem Header='Open with C# express'
 											  Click='contextmenuOpenWithCSharpExpress' />
+									<MenuItem Header='Publish Online'
+											  Click='contextmenuPublishOnline' />
 								</ContextMenu>
 							</Border.ContextMenu>
 							<DockPanel LastChildFill='True'

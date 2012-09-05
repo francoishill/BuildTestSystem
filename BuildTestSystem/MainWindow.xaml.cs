@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows.Shell;
 using Microsoft.WindowsAPICodePack.Taskbar;
 using System.Windows.Interop;
+using System.Windows.Threading;
 
 namespace BuildTestSystem
 {
@@ -96,9 +97,11 @@ namespace BuildTestSystem
 					BuildApplication buildapp = items[i] as BuildApplication;
 					ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, true);
 					Stopwatch sw = Stopwatch.StartNew();
-					string err = buildapp.PerformBuild();
+					List<string> csprojPaths;
+					string err;
+					bool buildSuccess = buildapp.PerformBuild(out csprojPaths, out err);
 					Logging.LogInfoToFile(string.Format("Duration to build {0} was {1} seconds.", buildapp.ApplicationName, sw.Elapsed.TotalSeconds), Logging.ReportingFrequencies.Daily, "BuildTestSystem", "Benchmarks");
-					if (err != null)
+					if (!buildSuccess)
 					{
 						appswithErrors.Add(buildapp.ApplicationName);
 						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
@@ -166,7 +169,9 @@ namespace BuildTestSystem
 			ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, false);
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
 			{
-				app.PerformBuild();
+				List<string> csprojPaths;
+				string err;
+				app.PerformBuild(out csprojPaths, out err);
 				HideIndeterminateProgress(true);
 				busybuilding = false;
 			},
@@ -179,6 +184,34 @@ namespace BuildTestSystem
 			var buildapp = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapp) return;
 			buildapp.OpenInCSharpExpress();
+		}
+
+		private void contextmenuPublishOnline(object sender, RoutedEventArgs e)
+		{
+			var buildapplication = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapplication) return;
+			TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+			TaskbarManager.Instance.SetProgressValue(0, 100);
+
+			buildapplication.LastBuildFeedback = "";
+			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
+			{
+				bool publishResult = buildapp.PerformPublishOnline(
+					(mess, messagetype) =>
+					{
+						switch (messagetype)
+						{
+							case FeedbackMessageTypes.Success: buildapp.AppendLastBuildFeedback(mess); break;
+							case FeedbackMessageTypes.Error: UserMessages.ShowErrorMessage(mess); break;
+							case FeedbackMessageTypes.Warning: UserMessages.ShowWarningMessage(mess); break;
+							case FeedbackMessageTypes.Status: buildapp.AppendLastBuildFeedback(mess); break;
+							default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
+						}
+					},
+					progperc => TaskbarManager.Instance.SetProgressValue(progperc, 100));
+			},
+			buildapplication,
+			false);
 		}
 	}
 
@@ -206,7 +239,26 @@ namespace BuildTestSystem
 				UserMessages.ShowErrorMessage("Cannot obtain CSharp Express path from registry.");
 				return;
 			}
-			Process.Start(csharpPath, "\"" + this.SolutionFullpath + "\"");
+			ThreadingInterop.PerformOneArgFunctionSeperateThread<string>((cspath) =>
+			{
+				var proc = Process.Start(csharpPath, "\"" + this.SolutionFullpath + "\"");
+				if (proc != null)
+				{
+					proc.WaitForExit();
+					List<string> csprojectPaths;
+					string errorIfFail;
+					this.PerformBuild(out csprojectPaths, out errorIfFail);
+				}
+			},
+			csharpPath,
+			false);
+		}
+
+		public void AppendLastBuildFeedback(string textToAppend)
+		{
+			if (!string.IsNullOrWhiteSpace(this.LastBuildFeedback))
+				this.LastBuildFeedback += Environment.NewLine;
+			this.LastBuildFeedback += textToAppend;
 		}
 	}
 
