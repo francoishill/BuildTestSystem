@@ -84,7 +84,7 @@ namespace BuildTestSystem
 				{
 					BuildApplication buildapp = items[i] as BuildApplication;
 					buildapp.LastBuildFeedback = null;
-					buildapp.HasErrors = false;
+					buildapp.HasFeedbackText = false;
 					buildapp.LastBuildResult = null;
 				}
 
@@ -220,9 +220,9 @@ namespace BuildTestSystem
 		private string _applicationname;
 		public override string ApplicationName { get { return _applicationname; } set { _applicationname = value; OnPropertyChanged("ApplicationName"); } }
 		private string _lastbuildfeedback;
-		public override string LastBuildFeedback { get { return _lastbuildfeedback ?? ""; } set { _lastbuildfeedback = value; OnPropertyChanged("LastBuildFeedback"); } }
-		private bool _haserrors;
-		public override bool HasErrors { get { return _haserrors; } set { _haserrors = value; LastBuildResult = !value; OnPropertyChanged("HasErrors"); } }
+		public override string LastBuildFeedback { get { return _lastbuildfeedback ?? ""; } set { _lastbuildfeedback = value; HasFeedbackText = value != null; OnPropertyChanged("LastBuildFeedback"); } }
+		private bool _hasfeedbacktext;
+		public override bool HasFeedbackText { get { return _hasfeedbacktext; } set { _hasfeedbacktext = value; LastBuildResult = !value; OnPropertyChanged("HasFeedbackText"); } }
 		private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }
 

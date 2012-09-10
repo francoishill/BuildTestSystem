@@ -10,6 +10,16 @@
 		Loaded='Window_Loaded'>
 	<Window.Resources>
 		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />
+		<LinearGradientBrush x:Key='ItemHoverBackgroundBrush'
+							 StartPoint='0,0'
+							 EndPoint='0,1'>
+			<GradientStop Color='#55aaaaaa'
+						  Offset='0' />
+			<GradientStop Color='#55eeeeee'
+						  Offset='0.7' />
+			<GradientStop Color='#55aaaaaa'
+						  Offset='1' />
+		</LinearGradientBrush>
 	</Window.Resources>
 	<DockPanel LastChildFill='True'>
 		<StackPanel Margin='20 10'
@@ -25,11 +35,15 @@
 						Margin='10'>
 				<Button Name='buttonObtainApplicationList'
 						Content='Obtain application list'
+						Background='Transparent'
+						BorderBrush='#aaa'
 						VerticalAlignment='Top'
 						Height='23'
 						Click='buttonObtainApplicationList_Click' />
 				<Button Name='buttonBuildAll'
 						Content='Build all'
+						Background='Transparent'
+						BorderBrush='#aaa'
 						Height='23'
 						Margin='10 0 0 0'
 						VerticalAlignment='Top'
@@ -42,7 +56,10 @@
 					 ScrollViewer.CanContentScroll='False'>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
-						<Border Background='{Binding LastBuildResult, Converter={StaticResource boolToBrushConverter}}'
+						<Border Name='borderMainItemBorder'
+								Background='{Binding LastBuildResult, Converter={StaticResource boolToBrushConverter}}'
+								BorderThickness='1'
+								BorderBrush='#44888888'
 								Margin='5'
 								Padding='3'
 								CornerRadius='5'
@@ -62,7 +79,7 @@
 									   MaxWidth='800'>
 								<Label DockPanel.Dock='Top'
 									   Content='{Binding ApplicationName}' />
-								<Expander IsExpanded='{Binding HasErrors}'>
+								<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
 									<TextBox Text='{Binding LastBuildFeedback}'
 											 ScrollViewer.CanContentScroll='True'
 											 ScrollViewer.HorizontalScrollBarVisibility='Auto'
@@ -72,6 +89,17 @@
 								</Expander>
 							</DockPanel>
 						</Border>
+						<DataTemplate.Triggers>
+							<DataTrigger Binding="{Binding IsMouseOver,RelativeSource={RelativeSource TemplatedParent}}"
+										 Value="True">
+								<Setter Property="Background"
+										TargetName="borderMainItemBorder"
+										Value='{StaticResource ItemHoverBackgroundBrush}' />
+								<Setter Property='BorderBrush'
+										TargetName='borderMainItemBorder'
+										Value='#777'/>
+							</DataTrigger>
+						</DataTemplate.Triggers>
 					</DataTemplate>
 				</ListBox.ItemTemplate>
 				<ListBox.ItemContainerStyle>

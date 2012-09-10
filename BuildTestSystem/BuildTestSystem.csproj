@@ -117,6 +117,9 @@
     <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\StringExtensions.cs">
       <Link>StringExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\..\SharedClasses\AutoUpdating.cs">
+      <Link>AutoUpdating.cs</Link>
+    </Compile>
     <Compile Include="..\..\SharedClasses\CompareObjects.cs">
       <Link>CompareObjects.cs</Link>
     </Compile>
@@ -158,6 +161,9 @@
     </Compile>
     <Compile Include="..\..\SharedClasses\ThreadingInterop.cs">
       <Link>ThreadingInterop.cs</Link>
+    </Compile>
+    <Compile Include="..\..\SharedClasses\UploadingProtocolTypesEnum.cs">
+      <Link>UploadingProtocolTypesEnum.cs</Link>
     </Compile>
     <Compile Include="..\..\SharedClasses\UserMessages.cs">
       <Link>UserMessages.cs</Link>
