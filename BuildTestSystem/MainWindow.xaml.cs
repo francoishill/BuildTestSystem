@@ -42,8 +42,8 @@ namespace BuildTestSystem
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
 				//Calls it to prevent delaying when obtaining list in future
-				var apps = OnlineSettings.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
-				OnlineSettings.BuildTestSystemSettings.EnsureDefaultItemsInList();
+				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
 				HideIndeterminateProgress(true);
 			},
 			false);
@@ -52,7 +52,7 @@ namespace BuildTestSystem
 		private void buttonObtainApplicationList_Click(object sender, RoutedEventArgs e)
 		{
 			tmpMainListbox.Items.Clear();
-			var applicationlist = OnlineSettings.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+			var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
 			applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
 			foreach (var app in applicationlist)
 			{
@@ -213,6 +213,14 @@ namespace BuildTestSystem
 			buildapplication,
 			false);
 		}
+
+		private void contextmenuInstallLatestVersion(object sender, RoutedEventArgs e)
+		{
+			var buildapplication = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapplication) return;
+			AutoUpdating.InstallLatest(buildapplication.ApplicationName,
+				err => UserMessages.ShowErrorMessage(err));
+		}
 	}
 
 	public class BuildApplication : VSBuildProject, INotifyPropertyChanged
@@ -225,6 +233,7 @@ namespace BuildTestSystem
 		public override bool HasFeedbackText { get { return _hasfeedbacktext; } set { _hasfeedbacktext = value; LastBuildResult = !value; OnPropertyChanged("HasFeedbackText"); } }
 		private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }
+		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
 
 		public BuildApplication(string ApplicationName) : base(ApplicationName) { }
 
