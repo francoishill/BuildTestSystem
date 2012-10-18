@@ -61,19 +61,19 @@ namespace BuildTestSystem
 			}
 		}
 
-		bool busybuilding = false;
+		bool isbusy = false;
 		private bool IsBusyBuilding(bool showErrorIfBusy = true)
 		{
-			if (busybuilding)
+			if (isbusy)
 				UserMessages.ShowWarningMessage("Cannot build, another build already in progress");
-			return busybuilding;
+			return isbusy;
 		}
 
 		private void buttonBuildAll_Click(object sender, RoutedEventArgs e)
 		{
 			if (IsBusyBuilding(true))
 				return;
-			busybuilding = true;
+			isbusy = true;
 
 			ShowIndeterminateProgress("Starting to build applications, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
@@ -117,9 +117,109 @@ namespace BuildTestSystem
 				else
 					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
 				HideIndeterminateProgress(true);
-				busybuilding = false;
+				isbusy = false;
 			},
 			false);
+		}
+
+		private void buttonCheckForUpdatesAll_Click(object sender, RoutedEventArgs e)
+		{
+			if (IsBusyBuilding(true))
+				return;
+			isbusy = true;
+
+			ShowIndeterminateProgress("Starting to build applications, please wait...");
+			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
+			{
+				var items = tmpMainListbox.Items;
+				List<string> appswithErrors = new List<string>();
+				for (int i = 0; i < items.Count; i++)
+				{
+					BuildApplication buildapp = items[i] as BuildApplication;
+					buildapp.LastBuildFeedback = null;
+					buildapp.HasFeedbackText = false;
+					buildapp.LastBuildResult = null;
+				}
+
+				TaskbarManager.Instance.SetProgressValue(0, items.Count);
+				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+
+				int completedItemCount = 0;
+
+				var buildApps = new List<BuildApplication>();
+				foreach (var item in items)
+					buildApps.Add(item as BuildApplication);
+				buildApps.RemoveAll(ba => ba.IsInstalled == false);
+				Parallel.ForEach<BuildApplication>(
+					buildApps,
+					(buildapp) =>
+					{
+						ShowIndeterminateProgress("Check for updates for : " + buildapp.ApplicationName, true);
+						AppCheckForUpdates(buildapp, false);
+						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
+					});
+
+				//for (int i = 0; i < items.Count; i++)
+				////Parallel.For(0, items.Count - 1, (i) =>
+				//{
+				//    BuildApplication buildapp = items[i] as BuildApplication;
+				//    ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, true);
+				//    AppCheckForUpdates(buildapp, false);
+				//    TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
+				//}//);
+				if (appswithErrors.Count > 0)
+				{
+					TaskbarManager.Instance.SetProgressValue(100, 100);
+					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
+					//    string.Join(Environment.NewLine, appswithErrors));
+				}
+				else
+					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+				HideIndeterminateProgress(true);
+				isbusy = false;
+			},
+			false);
+		}
+
+		private static void AppCheckForUpdates(BuildApplication buildapp, bool separateThread = true)
+		{
+			Action<BuildApplication> checkForUpdatesAction =
+				(buildApplication) =>
+				{
+					buildApplication.LastBuildFeedback = null;
+					buildApplication.HasFeedbackText = false;
+					buildApplication.LastBuildResult = null;
+
+					string appExePath = PublishInterop.GetApplicationExePathFromApplicationName(buildApplication.ApplicationName);
+					string InstalledVersion =
+						File.Exists(appExePath)
+						? FileVersionInfo.GetVersionInfo(appExePath).FileVersion
+						: "0.0.0.0";
+					string errorIfNull;
+					SharedClasses.AutoUpdating.MockPublishDetails onlineVersionDetails;
+					bool? checkSuccess =
+						AutoUpdating.CheckForUpdatesSilently(buildApplication.ApplicationName, InstalledVersion, out errorIfNull, out onlineVersionDetails);
+					if (checkSuccess == true)//Is up to date
+					{
+						buildApplication.LastBuildResult = true;
+						return;
+					}
+					else if (checkSuccess == false)//Newer version available
+					{
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						buildApplication.LastBuildFeedback = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
+					}
+					else//Unable to check for updates
+					{
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						buildApplication.LastBuildFeedback = "Error occurred checking for updates: " + errorIfNull;
+					}
+				};
+
+			if (separateThread)
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, buildapp, true);
+			else
+				checkForUpdatesAction(buildapp);
 		}
 
 		private void ShowIndeterminateProgress(string message, bool fromSeparateThread = false)
@@ -161,7 +261,7 @@ namespace BuildTestSystem
 		{
 			if (IsBusyBuilding(true))
 				return;
-			busybuilding = true;
+			isbusy = true;
 
 			var buildapp = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapp) return;
@@ -173,7 +273,7 @@ namespace BuildTestSystem
 				string err;
 				app.PerformBuild(out csprojPaths, out err);
 				HideIndeterminateProgress(true);
-				busybuilding = false;
+				isbusy = false;
 			},
 			buildapp,
 			false);
@@ -212,6 +312,13 @@ namespace BuildTestSystem
 			},
 			buildapplication,
 			false);
+		}
+
+		private void contextmenuCheckForUpdates(object sender, RoutedEventArgs e)
+		{
+			var buildapplication = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapplication) return;
+			AppCheckForUpdates(buildapplication, true);
 		}
 
 		private void contextmenuInstallLatestVersion(object sender, RoutedEventArgs e)

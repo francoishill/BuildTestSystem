@@ -3,6 +3,7 @@
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:local='clr-namespace:BuildTestSystem'
 		xmlns:sharedclasses='clr-namespace:SharedClasses'
+		Icon='app.ico'
 		Title="Build Test System"
 		Height="250"
 		Width="525"
@@ -51,6 +52,15 @@
 						VerticalAlignment='Top'
 						Width='75'
 						Click='buttonBuildAll_Click' />
+				<Button Name='buttonCheckForUpdatesAll'
+						Content='Check all for updates'
+						Background='Transparent'
+						BorderBrush='#aaa'
+						Height='23'
+						Margin='10 0 0 0'
+						VerticalAlignment='Top'
+						Width='130'
+						Click='buttonCheckForUpdatesAll_Click' />
 			</StackPanel>
 			<ListBox Name='tmpMainListbox'
 					 Margin='0 50 0 0'
@@ -76,9 +86,12 @@
 									<Separator />
 									<MenuItem Header='Publish Online'
 											  Click='contextmenuPublishOnline' />
-									<MenuItem Header='Install latest version' 
-											  Click='contextmenuInstallLatestVersion'
-											  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>
+									<MenuItem Header='Check for updates'
+											  Click='contextmenuCheckForUpdates'
+											  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
+									<MenuItem Header='Install latest version'
+											  Click='contextmenuInstallLatestVersion' />
+									<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
 								</ContextMenu>
 							</Border.ContextMenu>
 							<DockPanel LastChildFill='True'
