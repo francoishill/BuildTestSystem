@@ -14,6 +14,9 @@
 		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />
 		<local:BoolToOpacityConverter x:Key='boolToOpacityConverter' />
 		<sharedclasses:BooleanToVisibilityConverter x:Key='booleanToVisibilityConverter' />
+		<local:NullableIntToIntConverter x:Key='nullableIntToIntConverter' />
+		<local:NullableIntToBooleanConverter x:Key='nullableIntToBooleanConverter' />
+		<local:NullableIntToVisibilityConverter x:Key='nullableIntToVisibilityConverter' />
 		<LinearGradientBrush x:Key='ItemHoverBackgroundBrush'
 							 StartPoint='0,0'
 							 EndPoint='0,1'>
@@ -85,7 +88,7 @@
 				<RadioButton Content='All'
 							 Name='radionButtonShowAll'
 							 IsChecked='True'
-							Click='radioButtonShowAll_Click'/>
+							 Click='radioButtonShowAll_Click' />
 				<RadioButton Content='Installed'
 							 Margin='30 0 0 0'
 							 Click='radioButtonShowInstalled_Click' />
@@ -148,6 +151,14 @@
 							<DockPanel LastChildFill='True'
 									   MaxWidth='800'>
 								<StackPanel Orientation='Vertical'>
+									<ProgressBar Height='10'
+												 Width='100'
+												 HorizontalAlignment='Stretch'
+												 Value='{Binding CurrentProgressPercentage,Mode=OneWay,Converter={StaticResource nullableIntToIntConverter}}'
+												 IsIndeterminate='{Binding CurrentProgressPercentage,Mode=OneWay,Converter={StaticResource nullableIntToBooleanConverter},ConverterParameter=opposite}'
+												 Visibility='{Binding CurrentProgressPercentage,Mode=OneWay,Converter={StaticResource nullableIntToVisibilityConverter},ConverterParameter=HideInsteadOfCollapse}'
+												 Margin='10 0'
+												 Padding='0' />
 									<Label DockPanel.Dock='Top'
 										   Content='{Binding ApplicationName}' />
 									<StackPanel Orientation='Horizontal'
@@ -168,6 +179,7 @@
 											 ScrollViewer.HorizontalScrollBarVisibility='Auto'
 											 ScrollViewer.VerticalScrollBarVisibility='Auto'
 											 MaxHeight='300'
+											 FontSize='9'
 											 IsReadOnly='True' />
 								</Expander>
 							</DockPanel>

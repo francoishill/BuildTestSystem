@@ -44,7 +44,7 @@ namespace BuildTestSystem
 				//Calls it to prevent delaying when obtaining list in future
 				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
 				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
-				HideIndeterminateProgress(true);
+				HideIndeterminateProgress(null, true);
 			},
 			false);
 		}
@@ -143,6 +143,7 @@ namespace BuildTestSystem
 					buildApplication.LastBuildFeedback = null;
 					buildApplication.HasFeedbackText = false;
 					buildApplication.LastBuildResult = null;
+					buildapp.CurrentProgressPercentage = null;
 
 					string changesText;
 					if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
@@ -152,6 +153,7 @@ namespace BuildTestSystem
 					}
 					else
 						buildApplication.LastBuildResult = true;
+					buildapp.CurrentProgressPercentage = 0;
 				};
 
 			if (separateThread)
@@ -186,7 +188,7 @@ namespace BuildTestSystem
 				//Parallel.For(0, items.Count - 1, (i) =>
 				{
 					BuildApplication buildapp = items[i] as BuildApplication;
-					ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, true);
+					ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, buildapp, true);
 					Stopwatch sw = Stopwatch.StartNew();
 					List<string> csprojPaths;
 					string err;
@@ -197,6 +199,7 @@ namespace BuildTestSystem
 						appswithErrors.Add(buildapp.ApplicationName);
 						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
 					}
+					HideIndeterminateProgress(buildapp, true);
 					TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
 				}//);
 				if (appswithErrors.Count > 0)
@@ -207,7 +210,7 @@ namespace BuildTestSystem
 				}
 				else
 					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
-				HideIndeterminateProgress(true);
+				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
 			false);
@@ -245,8 +248,9 @@ namespace BuildTestSystem
 					buildApps,
 					(buildapp) =>
 					{
-						ShowIndeterminateProgress("Check for updates for : " + buildapp.ApplicationName, true);
+						ShowIndeterminateProgress("Check for updates for : " + buildapp.ApplicationName, buildapp, true);
 						AppCheckForUpdates(buildapp, false);
+						HideIndeterminateProgress(buildapp, true);
 						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
 					});
 
@@ -266,7 +270,7 @@ namespace BuildTestSystem
 				}
 				else
 					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
-				HideIndeterminateProgress(true);
+				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
 			false);
@@ -304,8 +308,9 @@ namespace BuildTestSystem
 					buildApps,
 					(buildapp) =>
 					{
-						ShowIndeterminateProgress("Check versioning status : " + buildapp.ApplicationName, true);
+						ShowIndeterminateProgress("Check versioning status : " + buildapp.ApplicationName, buildapp, true);
 						AppCheckForSubversionChanges(buildapp, false);
+						HideIndeterminateProgress(buildapp, true);
 						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
 					});
 
@@ -325,18 +330,20 @@ namespace BuildTestSystem
 				}
 				else
 					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
-				HideIndeterminateProgress(true);
+				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
 			false);
 		}
 
-		private void ShowIndeterminateProgress(string message, bool fromSeparateThread = false)
+		private void ShowIndeterminateProgress(string message, BuildApplication buildappToSetProgress = null, bool fromSeparateThread = false)
 		{
 			Action act = delegate
 			{
 				statusLabel.Text = message;
 				progressBarIndeterminate.Visibility = System.Windows.Visibility.Visible;
+				if (buildappToSetProgress != null)
+					buildappToSetProgress.CurrentProgressPercentage = null;
 			};
 			if (!fromSeparateThread)
 				act();
@@ -344,12 +351,17 @@ namespace BuildTestSystem
 				this.Dispatcher.Invoke(act);
 		}
 
-		private void HideIndeterminateProgress(bool fromSeparateThread = false)
+		private void HideIndeterminateProgress(BuildApplication buildappToSetProgress = null, bool fromSeparateThread = false)
 		{
 			Action act = delegate
 			{
-				statusLabel.Text = null;
-				progressBarIndeterminate.Visibility = System.Windows.Visibility.Hidden;
+				if (buildappToSetProgress == null)
+				{
+					statusLabel.Text = null;
+					progressBarIndeterminate.Visibility = System.Windows.Visibility.Hidden;
+				}
+				else
+					buildappToSetProgress.CurrentProgressPercentage = 0;
 			};
 			if (!fromSeparateThread)
 				act();
@@ -375,13 +387,14 @@ namespace BuildTestSystem
 			var buildapp = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapp) return;
 
-			ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, false);
+			ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, buildapp, false);
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
 			{
 				List<string> csprojPaths;
 				string err;
 				app.PerformBuild(out csprojPaths, out err);
-				HideIndeterminateProgress(true);
+				HideIndeterminateProgress(null, true);
+				HideIndeterminateProgress(app, true);
 				isbusy = false;
 			},
 			buildapp,
@@ -584,7 +597,10 @@ namespace BuildTestSystem
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
 		public bool? IsVersionControlled { get { return DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
-		public BuildApplication(string ApplicationName) : base(ApplicationName) { }
+		private int? _currentprogressPprcentage;
+		public int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged("CurrentProgressPercentage"); } }
+
+		public BuildApplication(string ApplicationName) : base(ApplicationName) { CurrentProgressPercentage = 0; }
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
@@ -680,6 +696,64 @@ namespace BuildTestSystem
 				return 1;
 			else
 				return 0.15;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public class NullableIntToIntConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			if (value == null || !(value is int?))
+				return 0;
+
+			return (value as int?).Value;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public class NullableIntToBooleanConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			bool paramIsOpposite = parameter != null && parameter.ToString().Equals("opposite", StringComparison.InvariantCultureIgnoreCase);
+			if (value == null || !(value is int?))
+			{
+				if (paramIsOpposite)
+					return true;
+				else
+					return false;
+			}
+
+			if (paramIsOpposite)
+				return false;
+			else
+				return true;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public class NullableIntToVisibilityConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			bool hideInsteadOfCollapse = parameter != null && parameter.ToString().Equals("HideInsteadOfCollapse", StringComparison.InvariantCultureIgnoreCase);
+			if ((value is int) && (int)value == 0)
+				return hideInsteadOfCollapse ? Visibility.Hidden : Visibility.Collapsed;
+			else
+				return Visibility.Visible;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
