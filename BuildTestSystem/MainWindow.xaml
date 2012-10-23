@@ -88,28 +88,32 @@
 								VerticalAlignment='Top'>
 							<Border.ContextMenu>
 								<ContextMenu>
-									<MenuItem Header='Rebuild this application'
-											  Click='contextmenuitemRebuildThisApplication' />
-									<MenuItem Header='Open with C# express'
-											  Click='contextmenuOpenWithCSharpExpress' />
-									<Separator />
-									<MenuItem Header='Publish Online'
-											  Click='contextmenuPublishOnline' />
-									<MenuItem Header='Check for updates'
-											  Click='contextmenuCheckForUpdates'
-											  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
-									<MenuItem Header='Install latest version'
-											  Click='contextmenuInstallLatestVersion' />
-									<Separator/>
-									<MenuItem Header='Check Subversion changes'
-											  Click='contextmenuCheckSubversionChanges' />
-									<MenuItem Header='Subversion update'
-											  Click='contextmenuSubversionUpdate' />
-									<MenuItem Header='Show Subversion log'
-											  Click='contextmenuShowSubversionLog' />
-									<MenuItem Header='Subversion commit changes'
-											  Click='contextmenuSubversionCommitChanges' />
-									<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
+									<MenuItem Header='Building'>
+										<MenuItem Header='Rebuild'
+												  Click='contextmenuitemRebuildThisApplication' />
+										<MenuItem Header='Open with C# express'
+												  Click='contextmenuOpenWithCSharpExpress' />
+									</MenuItem>
+									<MenuItem Header='Publish/update'>
+										<MenuItem Header='Publish Online'
+												  Click='contextmenuPublishOnline' />
+										<MenuItem Header='Check for updates'
+												  Click='contextmenuCheckForUpdates'
+												  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
+										<MenuItem Header='Install latest version'
+												  Click='contextmenuInstallLatestVersion' />
+									</MenuItem>
+									<MenuItem Header='Subversion'>
+										<MenuItem Header='Status'
+												  Click='contextmenuCheckSubversionChanges' />
+										<MenuItem Header='Update'
+												  Click='contextmenuSubversionUpdate' />
+										<MenuItem Header='Show log'
+												  Click='contextmenuShowSubversionLog' />
+										<MenuItem Header='Commit'
+												  Click='contextmenuSubversionCommitChanges' />
+										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
+									</MenuItem>
 								</ContextMenu>
 							</Border.ContextMenu>
 							<DockPanel LastChildFill='True'
