@@ -69,6 +69,72 @@ namespace BuildTestSystem
 			return isbusy;
 		}
 
+		private static void AppCheckForUpdates(BuildApplication buildapp, bool separateThread = true)
+		{
+			Action<BuildApplication> checkForUpdatesAction =
+				(buildApplication) =>
+				{
+					buildApplication.LastBuildFeedback = null;
+					buildApplication.HasFeedbackText = false;
+					buildApplication.LastBuildResult = null;
+
+					string appExePath = PublishInterop.GetApplicationExePathFromApplicationName(buildApplication.ApplicationName);
+					string InstalledVersion =
+						File.Exists(appExePath)
+						? FileVersionInfo.GetVersionInfo(appExePath).FileVersion
+						: "0.0.0.0";
+					string errorIfNull;
+					SharedClasses.AutoUpdating.MockPublishDetails onlineVersionDetails;
+					bool? checkSuccess =
+						AutoUpdating.CheckForUpdatesSilently(buildApplication.ApplicationName, InstalledVersion, out errorIfNull, out onlineVersionDetails);
+					if (checkSuccess == true)//Is up to date
+					{
+						buildApplication.LastBuildResult = true;
+						return;
+					}
+					else if (checkSuccess == false)//Newer version available
+					{
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						buildApplication.LastBuildFeedback = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
+					}
+					else//Unable to check for updates
+					{
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						buildApplication.LastBuildFeedback = "Error occurred checking for updates: " + errorIfNull;
+					}
+				};
+
+			if (separateThread)
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, buildapp, true);
+			else
+				checkForUpdatesAction(buildapp);
+		}
+
+		private static void AppCheckForSubversionChanges(BuildApplication buildapp, bool separateThread = true)
+		{
+			Action<BuildApplication> checkForSubversionChanges =
+				(buildApplication) =>
+				{
+					buildApplication.LastBuildFeedback = null;
+					buildApplication.HasFeedbackText = false;
+					buildApplication.LastBuildResult = null;
+
+					string changesText;
+					if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
+					{
+						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						buildApplication.LastBuildFeedback = changesText;
+					}
+					else
+						buildApplication.LastBuildResult = true;
+				};
+
+			if (separateThread)
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForSubversionChanges, buildapp, true);
+			else
+				checkForSubversionChanges(buildapp);
+		}
+
 		private void buttonBuildAll_Click(object sender, RoutedEventArgs e)
 		{
 			if (IsBusyBuilding(true))
@@ -128,7 +194,7 @@ namespace BuildTestSystem
 				return;
 			isbusy = true;
 
-			ShowIndeterminateProgress("Starting to build applications, please wait...");
+			ShowIndeterminateProgress("Starting to check applications for updates, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
 				var items = tmpMainListbox.Items;
@@ -181,45 +247,63 @@ namespace BuildTestSystem
 			false);
 		}
 
-		private static void AppCheckForUpdates(BuildApplication buildapp, bool separateThread = true)
+		private void buttonCheckVersioningStatusAll_Click(object sender, RoutedEventArgs e)
 		{
-			Action<BuildApplication> checkForUpdatesAction =
-				(buildApplication) =>
+			if (IsBusyBuilding(true))
+				return;
+			isbusy = true;
+
+			ShowIndeterminateProgress("Starting to check version control statusses, please wait...");
+			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
+			{
+				var items = tmpMainListbox.Items;
+				List<string> appswithErrors = new List<string>();
+				for (int i = 0; i < items.Count; i++)
 				{
-					buildApplication.LastBuildFeedback = null;
-					buildApplication.HasFeedbackText = false;
-					buildApplication.LastBuildResult = null;
+					BuildApplication buildapp = items[i] as BuildApplication;
+					buildapp.LastBuildFeedback = null;
+					buildapp.HasFeedbackText = false;
+					buildapp.LastBuildResult = null;
+				}
 
-					string appExePath = PublishInterop.GetApplicationExePathFromApplicationName(buildApplication.ApplicationName);
-					string InstalledVersion =
-						File.Exists(appExePath)
-						? FileVersionInfo.GetVersionInfo(appExePath).FileVersion
-						: "0.0.0.0";
-					string errorIfNull;
-					SharedClasses.AutoUpdating.MockPublishDetails onlineVersionDetails;
-					bool? checkSuccess =
-						AutoUpdating.CheckForUpdatesSilently(buildApplication.ApplicationName, InstalledVersion, out errorIfNull, out onlineVersionDetails);
-					if (checkSuccess == true)//Is up to date
-					{
-						buildApplication.LastBuildResult = true;
-						return;
-					}
-					else if (checkSuccess == false)//Newer version available
-					{
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
-						buildApplication.LastBuildFeedback = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
-					}
-					else//Unable to check for updates
-					{
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
-						buildApplication.LastBuildFeedback = "Error occurred checking for updates: " + errorIfNull;
-					}
-				};
+				TaskbarManager.Instance.SetProgressValue(0, items.Count);
+				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
 
-			if (separateThread)
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, buildapp, true);
-			else
-				checkForUpdatesAction(buildapp);
+				int completedItemCount = 0;
+
+				var buildApps = new List<BuildApplication>();
+				foreach (var item in items)
+					buildApps.Add(item as BuildApplication);
+				buildApps.RemoveAll(ba => ba.IsVersionControlled == false);
+				Parallel.ForEach<BuildApplication>(
+					buildApps,
+					(buildapp) =>
+					{
+						ShowIndeterminateProgress("Check versioning status : " + buildapp.ApplicationName, true);
+						AppCheckForSubversionChanges(buildapp, false);
+						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
+					});
+
+				//for (int i = 0; i < items.Count; i++)
+				////Parallel.For(0, items.Count - 1, (i) =>
+				//{
+				//    BuildApplication buildapp = items[i] as BuildApplication;
+				//    ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, true);
+				//    AppCheckForUpdates(buildapp, false);
+				//    TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
+				//}//);
+				if (appswithErrors.Count > 0)
+				{
+					TaskbarManager.Instance.SetProgressValue(100, 100);
+					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
+					//    string.Join(Environment.NewLine, appswithErrors));
+				}
+				else
+					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+				HideIndeterminateProgress(true);
+				isbusy = false;
+			},
+			false);
 		}
 
 		private void ShowIndeterminateProgress(string message, bool fromSeparateThread = false)
@@ -328,6 +412,76 @@ namespace BuildTestSystem
 			AutoUpdating.InstallLatest(buildapplication.ApplicationName,
 				err => UserMessages.ShowErrorMessage(err));
 		}
+
+		private void contextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
+		{
+			var buildapp = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapp) return;
+			if (buildapp.IsVersionControlled != true)
+				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+			else
+				AppCheckForSubversionChanges(buildapp, true);
+		}
+
+		private void contextmenuSubversionUpdate(object sender, RoutedEventArgs e)
+		{
+			var buildapp = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapp) return;
+			if (buildapp.IsVersionControlled != true)
+				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+			else
+			{
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+					(b) =>
+					{
+						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, buildapp.GetSolutionDirectory());
+						p.WaitForExit();
+						AppCheckForSubversionChanges(b);
+					},
+					buildapp,
+					false);
+			}
+		}
+
+		private void contextmenuShowSubversionLog(object sender, RoutedEventArgs e)
+		{
+			var buildapp = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapp) return;
+			if (buildapp.IsVersionControlled != true)
+				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+			else
+			{
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+					(b) =>
+					{
+						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, buildapp.GetSolutionDirectory());
+						p.WaitForExit();
+						AppCheckForSubversionChanges(b);
+					},
+					buildapp,
+					false);
+			}
+		}
+
+		private void contextmenuSubversionCommitChanges(object sender, RoutedEventArgs e)
+		{
+			var buildapp = GetBuildApplicationFromMenuItem(sender);
+			if (null == buildapp) return;
+			if (buildapp.IsVersionControlled != true)
+				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+			else
+			{
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+					(b) =>
+					{
+						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, buildapp.GetSolutionDirectory());
+						p.WaitForExit();
+						AppCheckForSubversionChanges(b);
+					},
+					buildapp,
+					false);
+			}
+		}
 	}
 
 	public class BuildApplication : VSBuildProject, INotifyPropertyChanged
@@ -341,11 +495,19 @@ namespace BuildTestSystem
 		private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
+		public bool? IsVersionControlled { get { return DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
 		public BuildApplication(string ApplicationName) : base(ApplicationName) { }
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
+
+		private bool DirIsValidSvnPath(string dir)
+		{
+			if (!Directory.Exists(dir))
+				return false;
+			return Directory.Exists(System.IO.Path.Combine(dir, ".svn"));
+		}
 
 		public void OpenInCSharpExpress()
 		{

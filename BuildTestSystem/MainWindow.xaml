@@ -6,7 +6,7 @@
 		Icon='app.ico'
 		Title="Build Test System"
 		Height="250"
-		Width="525"
+		Width='608'
 		WindowStartupLocation='CenterScreen'
 		WindowState='Maximized'
 		Loaded='Window_Loaded'>
@@ -61,6 +61,15 @@
 						VerticalAlignment='Top'
 						Width='130'
 						Click='buttonCheckForUpdatesAll_Click' />
+				<Button Name='buttonCheckVersioningStatus'
+						Content='Check versioning status'
+						Background='Transparent'
+						BorderBrush='#aaa'
+						Height='23'
+						Margin='10 0 0 0'
+						VerticalAlignment='Top'
+						Width='130'
+						Click='buttonCheckVersioningStatusAll_Click' />
 			</StackPanel>
 			<ListBox Name='tmpMainListbox'
 					 Margin='0 50 0 0'
@@ -91,6 +100,15 @@
 											  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
 									<MenuItem Header='Install latest version'
 											  Click='contextmenuInstallLatestVersion' />
+									<Separator/>
+									<MenuItem Header='Check Subversion changes'
+											  Click='contextmenuCheckSubversionChanges' />
+									<MenuItem Header='Subversion update'
+											  Click='contextmenuSubversionUpdate' />
+									<MenuItem Header='Show Subversion log'
+											  Click='contextmenuShowSubversionLog' />
+									<MenuItem Header='Subversion commit changes'
+											  Click='contextmenuSubversionCommitChanges' />
 									<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
 								</ContextMenu>
 							</Border.ContextMenu>
@@ -99,7 +117,16 @@
 								<StackPanel Orientation='Vertical'>
 									<Label DockPanel.Dock='Top'
 										   Content='{Binding ApplicationName}' />
-									<CheckBox IsChecked='{Binding IsInstalled,Mode=OneWay}' IsEnabled='False' />
+									<StackPanel Orientation='Horizontal' Margin='15 0 0 0'>
+										<TextBlock>Installed</TextBlock>
+										<CheckBox IsChecked='{Binding IsInstalled,Mode=OneWay}'
+												  IsEnabled='False'
+												  Margin='5 2 0 0'/>
+										<TextBlock Margin='15 0 0 0'>Versioned</TextBlock>
+										<CheckBox IsChecked='{Binding IsVersionControlled,Mode=OneWay}'
+												  IsEnabled='False'
+												  Margin='5 2 0 0' />
+									</StackPanel>
 								</StackPanel>
 								<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
 									<TextBox Text='{Binding LastBuildFeedback}'
