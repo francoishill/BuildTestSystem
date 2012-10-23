@@ -6,12 +6,13 @@
 		Icon='app.ico'
 		Title="Build Test System"
 		Height="250"
-		Width='608'
+		Width='790'
 		WindowStartupLocation='CenterScreen'
 		WindowState='Maximized'
 		Loaded='Window_Loaded'>
 	<Window.Resources>
 		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />
+		<local:BoolToOpacityConverter x:Key='boolToOpacityConverter' />
 		<sharedclasses:BooleanToVisibilityConverter x:Key='booleanToVisibilityConverter' />
 		<LinearGradientBrush x:Key='ItemHoverBackgroundBrush'
 							 StartPoint='0,0'
@@ -31,7 +32,14 @@
 						 Height='15'
 						 IsIndeterminate='True'
 						 Visibility='Hidden' />
-			<Label Name='statusLabel' />
+			<DockPanel LastChildFill='True'>
+				<TextBlock Text='About'
+						   DockPanel.Dock='Right'
+						   Foreground='Gray'
+						   Cursor='Hand'
+						   MouseLeftButtonUp='textblockAbout_MouseLeftButtonUp' />
+				<TextBlock Name='statusLabel' />
+			</DockPanel>
 		</StackPanel>
 		<Grid Name='mainContent'>
 			<StackPanel Orientation='Horizontal'
@@ -71,9 +79,30 @@
 						Width='130'
 						Click='buttonCheckVersioningStatusAll_Click' />
 			</StackPanel>
+			<StackPanel Orientation='Horizontal'
+						Margin='10 40 10 0'
+						VerticalAlignment='Top'>
+				<RadioButton Content='All'
+							 Name='radionButtonShowAll'
+							 IsChecked='True'
+							Click='radioButtonShowAll_Click'/>
+				<RadioButton Content='Installed'
+							 Margin='30 0 0 0'
+							 Click='radioButtonShowInstalled_Click' />
+				<RadioButton Content='Uninstalled'
+							 Margin='10 0 0 0'
+							 Click='radioButtonShowUninstalled_Click' />
+				<RadioButton Content='Version controlled'
+							 Margin='30 0 0 0'
+							 Click='radioButtonShowVersioncontrolled_Click' />
+				<RadioButton Content='Unversion controlled'
+							 Margin='10 0 0 0'
+							 Click='radioButtonShowUnversioncontrolled_Click' />
+			</StackPanel>
 			<ListBox Name='tmpMainListbox'
-					 Margin='0 50 0 0'
+					 Margin='10 55 10 0'
 					 BorderThickness='0'
+					 FontSize='20'
 					 ScrollViewer.CanContentScroll='False'>
 				<ListBox.ItemTemplate>
 					<DataTemplate>
@@ -81,7 +110,7 @@
 								Background='{Binding LastBuildResult, Converter={StaticResource boolToBrushConverter}}'
 								BorderThickness='1'
 								BorderBrush='#44888888'
-								Margin='5'
+								Margin='0 15 30 15'
 								Padding='3'
 								CornerRadius='5'
 								Focusable='False'
@@ -121,15 +150,16 @@
 								<StackPanel Orientation='Vertical'>
 									<Label DockPanel.Dock='Top'
 										   Content='{Binding ApplicationName}' />
-									<StackPanel Orientation='Horizontal' Margin='15 0 0 0'>
-										<TextBlock>Installed</TextBlock>
-										<CheckBox IsChecked='{Binding IsInstalled,Mode=OneWay}'
-												  IsEnabled='False'
-												  Margin='5 2 0 0'/>
-										<TextBlock Margin='15 0 0 0'>Versioned</TextBlock>
-										<CheckBox IsChecked='{Binding IsVersionControlled,Mode=OneWay}'
-												  IsEnabled='False'
-												  Margin='5 2 0 0' />
+									<StackPanel Orientation='Horizontal'
+												Margin='15 0 0 0'>
+										<Image Width='32'
+											   Source='/BuildTestSystem;component/Resources/greenshield.ico'
+											   ToolTip='Application installed status'
+											   Opacity='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource boolToOpacityConverter}}' />
+										<Image Width='32'
+											   Source='/BuildTestSystem;component/Resources/greentick.ico'
+											   ToolTip='Version controlled status'
+											   Opacity='{Binding IsVersionControlled,Mode=OneWay,Converter={StaticResource boolToOpacityConverter}}' />
 									</StackPanel>
 								</StackPanel>
 								<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
@@ -150,7 +180,7 @@
 										Value='{StaticResource ItemHoverBackgroundBrush}' />
 								<Setter Property='BorderBrush'
 										TargetName='borderMainItemBorder'
-										Value='#777'/>
+										Value='#777' />
 							</DataTrigger>
 						</DataTemplate.Triggers>
 					</DataTemplate>

@@ -49,8 +49,33 @@ namespace BuildTestSystem
 			false);
 		}
 
+		private void ForeachBuildapp(Action<BuildApplication> onBuildApp)
+		{
+			var items = tmpMainListbox.Items;
+			for (int i = 0; i < items.Count; i++)
+			{
+				BuildApplication buildapp = items[i] as BuildApplication;
+				if (buildapp != null)
+					onBuildApp(buildapp);
+			}
+		}
+
+		private void ForeachBuildappBorder(Action<BuildApplication, Border> onBuildappBorder)
+		{
+			ForeachBuildapp((ba) =>
+			{
+				var listboxItem = (ListBoxItem)tmpMainListbox.ItemContainerGenerator.ContainerFromItem(ba);
+				ContentPresenter myContentPresenter = WPFHelper.GetVisualChild<ContentPresenter>(listboxItem);
+				DataTemplate myDataTemplate = myContentPresenter.ContentTemplate;
+				Border border = (Border)myDataTemplate.FindName("borderMainItemBorder", myContentPresenter);
+				if (border != null)
+					onBuildappBorder(ba, border);
+			});
+		}
+
 		private void buttonObtainApplicationList_Click(object sender, RoutedEventArgs e)
 		{
+			radionButtonShowAll.IsChecked = true;
 			tmpMainListbox.Items.Clear();
 			var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
 			applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
@@ -310,7 +335,7 @@ namespace BuildTestSystem
 		{
 			Action act = delegate
 			{
-				statusLabel.Content = message;
+				statusLabel.Text = message;
 				progressBarIndeterminate.Visibility = System.Windows.Visibility.Visible;
 			};
 			if (!fromSeparateThread)
@@ -323,7 +348,7 @@ namespace BuildTestSystem
 		{
 			Action act = delegate
 			{
-				statusLabel.Content = null;
+				statusLabel.Text = null;
 				progressBarIndeterminate.Visibility = System.Windows.Visibility.Hidden;
 			};
 			if (!fromSeparateThread)
@@ -482,6 +507,68 @@ namespace BuildTestSystem
 					false);
 			}
 		}
+
+		private void textblockAbout_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+		{
+			AboutWindow2.ShowAboutWindow(new System.Collections.ObjectModel.ObservableCollection<DisplayItem>()
+			{
+				new DisplayItem("Author", "Francois Hill"),
+				new DisplayItem("Icon obtained from", "http://www.icons-land.com", "http://www.icons-land.com/vista-base-software-icons.php")
+
+			});
+		}
+
+		private void radioButtonShowAll_Click(object sender, RoutedEventArgs e)
+		{
+			ForeachBuildappBorder((ba, border) =>
+			{
+				border.Visibility = System.Windows.Visibility.Visible;
+			});
+		}
+
+		private void radioButtonShowInstalled_Click(object sender, RoutedEventArgs e)
+		{
+			ForeachBuildappBorder((ba, border) =>
+			{
+				if (ba.IsInstalled == true)
+					border.Visibility = System.Windows.Visibility.Visible;
+				else
+					border.Visibility = System.Windows.Visibility.Collapsed;
+			});
+		}
+
+		private void radioButtonShowUninstalled_Click(object sender, RoutedEventArgs e)
+		{
+			ForeachBuildappBorder((ba, border) =>
+			{
+				if (!ba.IsInstalled == true)
+					border.Visibility = System.Windows.Visibility.Visible;
+				else
+					border.Visibility = System.Windows.Visibility.Collapsed;
+			});
+		}
+
+		private void radioButtonShowVersioncontrolled_Click(object sender, RoutedEventArgs e)
+		{
+			ForeachBuildappBorder((ba, border) =>
+			{
+				if (ba.IsVersionControlled == true)
+					border.Visibility = System.Windows.Visibility.Visible;
+				else
+					border.Visibility = System.Windows.Visibility.Collapsed;
+			});
+		}
+
+		private void radioButtonShowUnversioncontrolled_Click(object sender, RoutedEventArgs e)
+		{
+			ForeachBuildappBorder((ba, border) =>
+			{
+				if (!ba.IsVersionControlled == true)
+					border.Visibility = System.Windows.Visibility.Visible;
+				else
+					border.Visibility = System.Windows.Visibility.Collapsed;
+			});
+		}
 	}
 
 	public class BuildApplication : VSBuildProject, INotifyPropertyChanged
@@ -571,6 +658,28 @@ namespace BuildTestSystem
 			else
 				return new LinearGradientBrush(ErrorColorStops, new Point(0, 0), new Point(0, 1));
 
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}
+
+	public class BoolToOpacityConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			if (!(value is bool?) && value != null)//If null we assume its a null bool?
+				return 0.05;
+
+			bool? boolval = (bool?)value;
+			if (!boolval.HasValue)
+				return 0.05;
+			else if (boolval.Value)
+				return 1;
+			else
+				return 0.15;
 		}
 
 		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
