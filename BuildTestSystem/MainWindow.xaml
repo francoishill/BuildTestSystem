@@ -4,7 +4,7 @@
 		xmlns:local='clr-namespace:BuildTestSystem'
 		xmlns:sharedclasses='clr-namespace:SharedClasses'
 		Icon='app.ico'
-		Title="Build Test System"
+		Title='Build test system'
 		Height="250"
 		Width='790'
 		WindowStartupLocation='CenterScreen'
@@ -26,7 +26,72 @@
 			<GradientStop Color='#55aaaaaa'
 						  Offset='1' />
 		</LinearGradientBrush>
+		<DrawingImage x:Key="overlayImageSucccess">
+			<DrawingImage.Drawing>
+				<DrawingGroup>
+					<DrawingGroup.Children>
+						<GeometryDrawing Brush="Green">
+							<GeometryDrawing.Geometry>
+								<EllipseGeometry  RadiusX='5'
+												  RadiusY='5' />
+								<!--<RectangleGeometry Rect="0 0 16 16"
+												   RadiusX="3"
+												   RadiusY="3" />-->
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup.Children>
+				</DrawingGroup>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+		<DrawingImage x:Key="overlayImageBuildFailed">
+			<DrawingImage.Drawing>
+				<DrawingGroup>
+					<DrawingGroup.Children>
+						<GeometryDrawing Brush="Red">
+							<GeometryDrawing.Geometry>
+								<RectangleGeometry Rect="0 0 16 16"
+												   RadiusX="3"
+												   RadiusY="3" />
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup.Children>
+				</DrawingGroup>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+		<DrawingImage x:Key="overlayImageNotUpToDate">
+			<DrawingImage.Drawing>
+				<DrawingGroup>
+					<DrawingGroup.Children>
+						<GeometryDrawing Brush="Red">
+							<GeometryDrawing.Geometry>
+								<RectangleGeometry Rect="0 0 16 16"
+												   RadiusX="3"
+												   RadiusY="3" />
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup.Children>
+				</DrawingGroup>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+		<DrawingImage x:Key="overlayImageVersionControlChanges">
+			<DrawingImage.Drawing>
+				<DrawingGroup>
+					<DrawingGroup.Children>
+						<GeometryDrawing Brush="Red">
+							<GeometryDrawing.Geometry>
+								<RectangleGeometry Rect="0 0 16 16"
+												   RadiusX="3"
+												   RadiusY="3" />
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup.Children>
+				</DrawingGroup>
+			</DrawingImage.Drawing>
+		</DrawingImage>
 	</Window.Resources>
+	<Window.TaskbarItemInfo>
+		<TaskbarItemInfo />
+	</Window.TaskbarItemInfo>
 	<DockPanel LastChildFill='True'>
 		<StackPanel Margin='20 10'
 					DockPanel.Dock='Bottom'>

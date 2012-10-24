@@ -20,7 +20,6 @@ using Microsoft.Build.Evaluation;
 using Microsoft.Build.Framework;
 using System.Threading.Tasks;
 using System.Windows.Shell;
-using Microsoft.WindowsAPICodePack.Taskbar;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
@@ -31,9 +30,65 @@ namespace BuildTestSystem
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		private static TaskbarItemInfo WindowTaskBarItem;
+		private static MainWindow windowInstance;
+
 		public MainWindow()
 		{
 			InitializeComponent();
+
+			WindowTaskBarItem = this.TaskbarItemInfo;
+			windowInstance = this;
+
+			this.TaskbarItemInfo.Overlay = (DrawingImage)this.Resources["overlayImageSucccess"];
+		}
+
+		public static void SetWindowProgressValue(double progressFractionOfOne)
+		{
+			windowInstance.Dispatcher.Invoke((Action<double>)(
+				(progfact) =>
+				{
+					WindowTaskBarItem.ProgressValue = progfact;
+				}),
+				progressFractionOfOne);
+		}
+
+		public enum OverlayImage { Success, BuildFailed, NotUpToDate, VersionControlChanges };
+		public static void SetWindowProgressState(TaskbarItemProgressState progressState, OverlayImage? overlayImage = null)
+		{
+			windowInstance.Dispatcher.Invoke((Action<TaskbarItemProgressState, OverlayImage>)(
+				(state, image) =>
+				{
+					WindowTaskBarItem.ProgressState = state;
+
+					WindowTaskBarItem.Overlay = null;
+					if (image != null)
+					{
+						string resourceKeyForOverlay = "";
+						switch (image)
+						{
+							case OverlayImage.Success:
+								resourceKeyForOverlay = "overlayImageSucccess";
+								break;
+							case OverlayImage.BuildFailed:
+								resourceKeyForOverlay = "overlayImageBuildFailed";
+								break;
+							case OverlayImage.NotUpToDate:
+								resourceKeyForOverlay = "overlayImageNotUpToDate";
+								break;
+							case OverlayImage.VersionControlChanges:
+								resourceKeyForOverlay = "overlayImageVersionControlChanges";
+								break;
+							default:
+								break;
+						}
+
+						if (!string.IsNullOrWhiteSpace(resourceKeyForOverlay))
+							WindowTaskBarItem.Overlay = (DrawingImage)windowInstance.Resources[resourceKeyForOverlay];
+					}
+				}),
+				progressState,
+				overlayImage);
 		}
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -120,12 +175,12 @@ namespace BuildTestSystem
 					}
 					else if (checkSuccess == false)//Newer version available
 					{
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 						buildApplication.LastBuildFeedback = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
 					}
 					else//Unable to check for updates
 					{
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 						buildApplication.LastBuildFeedback = "Error occurred checking for updates: " + errorIfNull;
 					}
 				};
@@ -149,7 +204,7 @@ namespace BuildTestSystem
 					string changesText;
 					if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
 					{
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 						buildApplication.LastBuildFeedback = changesText;
 					}
 					else
@@ -182,8 +237,8 @@ namespace BuildTestSystem
 					buildapp.LastBuildResult = null;
 				}
 
-				TaskbarManager.Instance.SetProgressValue(0, items.Count);
-				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+				MainWindow.SetWindowProgressValue(0);
+				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 
 				for (int i = 0; i < items.Count; i++)
 				//Parallel.For(0, items.Count - 1, (i) =>
@@ -198,19 +253,20 @@ namespace BuildTestSystem
 					if (!buildSuccess)
 					{
 						appswithErrors.Add(buildapp.ApplicationName);
-						TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Error);
+						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 					}
 					HideIndeterminateProgress(buildapp, true);
-					TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
+					MainWindow.SetWindowProgressValue(((double)(i + 1)) / (double)items.Count);
 				}//);
 				if (appswithErrors.Count > 0)
 				{
-					TaskbarManager.Instance.SetProgressValue(100, 100);
+					MainWindow.SetWindowProgressValue(1);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error, OverlayImage.BuildFailed);
 					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
 					//    string.Join(Environment.NewLine, appswithErrors));
 				}
 				else
-					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
@@ -236,8 +292,8 @@ namespace BuildTestSystem
 					buildapp.LastBuildResult = null;
 				}
 
-				TaskbarManager.Instance.SetProgressValue(0, items.Count);
-				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+				MainWindow.SetWindowProgressValue(0);
+				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 
 				int completedItemCount = 0;
 
@@ -251,8 +307,10 @@ namespace BuildTestSystem
 					{
 						ShowIndeterminateProgress("Check for updates for : " + buildapp.ApplicationName, buildapp, true);
 						AppCheckForUpdates(buildapp, false);
+						if (!string.IsNullOrWhiteSpace(buildapp.LastBuildFeedback))
+							appswithErrors.Add(buildapp.ApplicationName);
 						HideIndeterminateProgress(buildapp, true);
-						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
+						MainWindow.SetWindowProgressValue((double)++completedItemCount / (double)items.Count);
 					});
 
 				//for (int i = 0; i < items.Count; i++)
@@ -265,12 +323,13 @@ namespace BuildTestSystem
 				//}//);
 				if (appswithErrors.Count > 0)
 				{
-					TaskbarManager.Instance.SetProgressValue(100, 100);
+					MainWindow.SetWindowProgressValue(1);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error, OverlayImage.NotUpToDate);
 					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
 					//    string.Join(Environment.NewLine, appswithErrors));
 				}
 				else
-					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
@@ -296,8 +355,8 @@ namespace BuildTestSystem
 					buildapp.LastBuildResult = null;
 				}
 
-				TaskbarManager.Instance.SetProgressValue(0, items.Count);
-				TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
+				MainWindow.SetWindowProgressValue(0);
+				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 
 				int completedItemCount = 0;
 
@@ -311,8 +370,10 @@ namespace BuildTestSystem
 					{
 						ShowIndeterminateProgress("Check versioning status : " + buildapp.ApplicationName, buildapp, true);
 						AppCheckForSubversionChanges(buildapp, false);
+						if (!string.IsNullOrWhiteSpace(buildapp.LastBuildFeedback))
+							appswithErrors.Add(buildapp.ApplicationName);
 						HideIndeterminateProgress(buildapp, true);
-						TaskbarManager.Instance.SetProgressValue(++completedItemCount, items.Count);
+						MainWindow.SetWindowProgressValue((double)++completedItemCount / (double)items.Count);
 					});
 
 				//for (int i = 0; i < items.Count; i++)
@@ -325,12 +386,13 @@ namespace BuildTestSystem
 				//}//);
 				if (appswithErrors.Count > 0)
 				{
-					TaskbarManager.Instance.SetProgressValue(100, 100);
+					MainWindow.SetWindowProgressValue(1);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error, OverlayImage.VersionControlChanges);
 					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
 					//    string.Join(Environment.NewLine, appswithErrors));
 				}
 				else
-					TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.NoProgress);
+					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
 				isbusy = false;
 			},
@@ -413,8 +475,8 @@ namespace BuildTestSystem
 		{
 			var buildapplication = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapplication) return;
-			TaskbarManager.Instance.SetProgressState(TaskbarProgressBarState.Normal);
-			TaskbarManager.Instance.SetProgressValue(0, 100);
+			MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
+			MainWindow.SetWindowProgressValue(0);
 
 			buildapplication.LastBuildFeedback = "";
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
@@ -431,7 +493,7 @@ namespace BuildTestSystem
 							default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
 						}
 					},
-					progperc => TaskbarManager.Instance.SetProgressValue(progperc, 100));
+					progperc => MainWindow.SetWindowProgressValue((double)progperc / 100D));
 			},
 			buildapplication,
 			false);
