@@ -228,20 +228,46 @@ namespace BuildTestSystem
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
 				var items = tmpMainListbox.Items;
-				List<string> appswithErrors = new List<string>();
+				List<BuildApplication> applist = new List<BuildApplication>();
+				//List<string> appswithErrors = new List<string>();
 				for (int i = 0; i < items.Count; i++)
 				{
 					BuildApplication buildapp = items[i] as BuildApplication;
 					buildapp.LastBuildFeedback = null;
 					buildapp.HasFeedbackText = false;
 					buildapp.LastBuildResult = null;
+					applist.Add(buildapp);
 				}
 
 				MainWindow.SetWindowProgressValue(0);
 				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 
-				for (int i = 0; i < items.Count; i++)
-				//Parallel.For(0, items.Count - 1, (i) =>
+				Dictionary<VSBuildProject, string> errors;
+				Dictionary<BuildApplication, Stopwatch> stopwatches = new Dictionary<BuildApplication, Stopwatch>();
+				int completeCount = 0;
+				var allBuildResult = VSBuildProject.PerformMultipleBuild(
+					applist,
+					out errors,
+					(appwhichstart) =>
+					{
+						ShowIndeterminateProgress("Building application: " + appwhichstart.ApplicationName, (BuildApplication)appwhichstart, true);
+						stopwatches.Add((BuildApplication)appwhichstart, Stopwatch.StartNew());
+					},
+					(appwhichbuildcomplete, buildSuccess) =>
+					{
+						Stopwatch sw = stopwatches[(BuildApplication)appwhichbuildcomplete];
+						Logging.LogInfoToFile(string.Format("Duration to build {0} was {1} seconds.", appwhichbuildcomplete.ApplicationName, sw.Elapsed.TotalSeconds), Logging.ReportingFrequencies.Daily, "BuildTestSystem", "Benchmarks");
+						if (!buildSuccess)
+						{
+							//appswithErrors.Add(buildapp.ApplicationName);
+							MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
+						}
+						HideIndeterminateProgress((BuildApplication)appwhichbuildcomplete, true);
+						MainWindow.SetWindowProgressValue(((double)(++completeCount)) / (double)items.Count);
+					});
+				var appswithErrors = allBuildResult.Keys.Where(k => !allBuildResult[k]).Select(k => k.ApplicationName).ToList();
+				//for (int i = 0; i < items.Count; i++)
+				/*Parallel.For(0, items.Count - 1, (i) =>
 				{
 					BuildApplication buildapp = items[i] as BuildApplication;
 					ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, buildapp, true);
@@ -257,7 +283,7 @@ namespace BuildTestSystem
 					}
 					HideIndeterminateProgress(buildapp, true);
 					MainWindow.SetWindowProgressValue(((double)(i + 1)) / (double)items.Count);
-				}//);
+				});*/
 				if (appswithErrors.Count > 0)
 				{
 					MainWindow.SetWindowProgressValue(1);
@@ -443,9 +469,9 @@ namespace BuildTestSystem
 
 		private void contextmenuitemRebuildThisApplication(object sender, RoutedEventArgs e)
 		{
-			if (IsBusyBuilding(true))
-				return;
-			isbusy = true;
+			//if (IsBusyBuilding(true))
+			//    return;
+			//isbusy = true;
 
 			var buildapp = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapp) return;
@@ -458,7 +484,7 @@ namespace BuildTestSystem
 				app.PerformBuild(out csprojPaths, out err);
 				HideIndeterminateProgress(null, true);
 				HideIndeterminateProgress(app, true);
-				isbusy = false;
+				//isbusy = false;
 			},
 			buildapp,
 			false);
