@@ -8,7 +8,6 @@
 		Height="250"
 		Width='790'
 		WindowStartupLocation='CenterScreen'
-		WindowState='Maximized'
 		Loaded='Window_Loaded'>
 	<Window.Resources>
 		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />

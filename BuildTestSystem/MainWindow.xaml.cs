@@ -38,6 +38,7 @@ namespace BuildTestSystem
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
+			this.WindowState = System.Windows.WindowState.Maximized;
 			ShowIndeterminateProgress("Obtaining list");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
@@ -648,16 +649,16 @@ namespace BuildTestSystem
 		private static GradientStopCollection SuccessColorStops =
 			new GradientStopCollection(new GradientStop[]
  			{
-				new GradientStop(Color.FromArgb(100, 0, 130, 0), 0),
-				new GradientStop(Color.FromArgb(140, 0, 180, 0), 0.7),
-				new GradientStop(Color.FromArgb(100, 0, 130, 0), 1)
+				new GradientStop(Color.FromArgb(20, 0, 130, 0), 0),
+				new GradientStop(Color.FromArgb(40, 0, 180, 0), 0.7),
+				new GradientStop(Color.FromArgb(20, 0, 130, 0), 1)
 			});
 		private static GradientStopCollection ErrorColorStops =
 			new GradientStopCollection(new GradientStop[]
 			{
-				new GradientStop(Color.FromArgb(100, 130, 0, 0), 0),
-				new GradientStop(Color.FromArgb(140, 180, 0, 0), 0.7),
-				new GradientStop(Color.FromArgb(100, 130, 0, 0), 1)
+				new GradientStop(Color.FromArgb(20, 130, 0, 0), 0),
+				new GradientStop(Color.FromArgb(40, 180, 0, 0), 0.7),
+				new GradientStop(Color.FromArgb(20, 130, 0, 0), 1)
 			});
 
 		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
