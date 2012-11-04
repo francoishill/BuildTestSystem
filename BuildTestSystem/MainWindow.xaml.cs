@@ -480,8 +480,7 @@ namespace BuildTestSystem
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
 			{
 				List<string> csprojPaths;
-				string err;
-				app.PerformBuild(out csprojPaths, out err);
+				app.PerformBuild(null, out csprojPaths);
 				HideIndeterminateProgress(null, true);
 				HideIndeterminateProgress(app, true);
 				//isbusy = false;
@@ -689,7 +688,9 @@ namespace BuildTestSystem
 		private int? _currentprogressPprcentage;
 		public int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged("CurrentProgressPercentage"); } }
 
-		public BuildApplication(string ApplicationName) : base(ApplicationName) { CurrentProgressPercentage = 0; }
+		public BuildApplication(string ApplicationName, Action<string> actionOnError = null)
+			: base(ApplicationName, null, actionOnError)
+		{ CurrentProgressPercentage = 0; }
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
@@ -716,8 +717,7 @@ namespace BuildTestSystem
 				{
 					proc.WaitForExit();
 					List<string> csprojectPaths;
-					string errorIfFail;
-					this.PerformBuild(out csprojectPaths, out errorIfFail);
+					this.PerformBuild(null, out csprojectPaths);
 				}
 			},
 			csharpPath,
