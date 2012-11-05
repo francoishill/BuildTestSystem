@@ -293,7 +293,7 @@ namespace BuildTestSystem
 								.Replace(minusToken, "-")
 								.Replace(commaToken, ",")
 								.Replace(hashToken, "#");*/
-							commitMsg = EncodeAndDecodeInterop.DecodeStringHex(arg3commitMsg);
+							commitMsg = EncodeAndDecodeInterop.DecodeStringHex(arg3commitMsg.ToUpper());
 						}
 						WriteOutput("Commiting, message = " + commitMsg);
 						ProcessesInterop.StartAndWaitProcessRedirectOutput(
