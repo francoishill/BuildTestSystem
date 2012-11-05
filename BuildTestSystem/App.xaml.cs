@@ -280,7 +280,7 @@ namespace BuildTestSystem
 							return;
 						}
 
-						/*string commitMsg = "";
+						string commitMsg = "";
 						if (arg3commitMsg.Trim() != "___")//This was posted via buildtestsystem.js, and it means "no commit message"
 						{
 							const string forwardSlashToken = "_FWSLASH_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a forward slash in javascript the normal way, use own token
@@ -299,7 +299,7 @@ namespace BuildTestSystem
 								"commit -m\"" + commitMsg + "\" " + TortoiseProcInterop.GetExtraSvnParams() + " \"" + Path.GetDirectoryName(buildapp.SolutionFullpath) + "\""),
 							(sn, o) => { WriteOutput(o); },
 							(sn, er) => { WriteError(er); },
-							out tmpOutExitCode);*/
+							out tmpOutExitCode);
 						break;
 					case CommandlineTasks.DownloadTempSetup:
 						string fullServerPathToSetup =
