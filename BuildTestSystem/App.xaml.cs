@@ -283,14 +283,17 @@ namespace BuildTestSystem
 						string commitMsg = "";
 						if (arg3commitMsg.Trim() != "___")//This was posted via buildtestsystem.js, and it means "no commit message"
 						{
-							const string forwardSlashToken = "_FWSLASH_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a forward slash in javascript the normal way, use own token
+							/*const string forwardSlashToken = "_FWSLASH_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a forward slash in javascript the normal way, use own token
 							const string minusToken = "_MINUS_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a minus sign in javascript the normal way, use own token
 							const string commaToken = "_COMMA_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a comma in javascript the normal way, use own token
+							const string hashToken = "_HASH_";//DO NOT CHANGE (same in codeigniter app, js\buildtestsystem.js): Cannot encode a hash in javascript the normal way, use own token
 							commitMsg =
 								Uri.UnescapeDataString(arg3commitMsg)
 								.Replace(forwardSlashToken, "/")
 								.Replace(minusToken, "-")
-								.Replace(commaToken, ",");
+								.Replace(commaToken, ",")
+								.Replace(hashToken, "#");*/
+							commitMsg = EncodeAndDecodeInterop.DecodeStringHex(arg3commitMsg);
 						}
 						WriteOutput("Commiting, message = " + commitMsg);
 						ProcessesInterop.StartAndWaitProcessRedirectOutput(
