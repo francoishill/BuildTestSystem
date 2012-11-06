@@ -103,6 +103,7 @@ namespace BuildTestSystem
 				HideIndeterminateProgress(null, true);
 			},
 			false);
+			ObtainApplicationList();
 		}
 
 		private void ForeachBuildapp(Action<BuildApplication> onBuildApp)
@@ -130,6 +131,11 @@ namespace BuildTestSystem
 		}
 
 		private void buttonObtainApplicationList_Click(object sender, RoutedEventArgs e)
+		{
+			ObtainApplicationList();
+		}
+
+		private void ObtainApplicationList()
 		{
 			radionButtonShowAll.IsChecked = true;
 			tmpMainListbox.Items.Clear();
