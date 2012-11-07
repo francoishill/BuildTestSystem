@@ -187,7 +187,9 @@ namespace BuildTestSystem
 					else//Unable to check for updates
 					{
 						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
-						buildApplication.LastBuildFeedback = "Error occurred checking for updates: " + errorIfNull;
+						buildApplication.LastBuildFeedback
+							= /*"Error occurred checking for updates: " + */
+							"ERROR: " + errorIfNull;
 					}
 				};
 
