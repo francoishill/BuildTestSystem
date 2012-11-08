@@ -196,7 +196,7 @@
 										<MenuItem Header='Check for updates'
 												  Click='contextmenuCheckForUpdates'
 												  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
-										<MenuItem Header='Install latest version'
+										<MenuItem Header='Install latest version (silently)'
 												  Click='contextmenuInstallLatestVersion' />
 									</MenuItem>
 									<MenuItem Header='Subversion'>

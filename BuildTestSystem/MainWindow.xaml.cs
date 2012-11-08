@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows.Shell;
 using System.Windows.Interop;
 using System.Windows.Threading;
+using System.Threading;
 
 namespace BuildTestSystem
 {
@@ -41,6 +42,21 @@ namespace BuildTestSystem
 			windowInstance = this;
 
 			this.TaskbarItemInfo.Overlay = (DrawingImage)this.Resources["overlayImageSucccess"];
+		}
+
+		private void Window_Loaded(object sender, RoutedEventArgs e)
+		{
+			this.WindowState = System.Windows.WindowState.Maximized;
+			ShowIndeterminateProgress("Obtaining list");
+			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
+			{
+				//Calls it to prevent delaying when obtaining list in future
+				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
+				HideIndeterminateProgress(null, true);
+				ObtainApplicationList();
+			},
+			false);
 		}
 
 		public static void SetWindowProgressValue(double progressFractionOfOne)
@@ -91,21 +107,6 @@ namespace BuildTestSystem
 				overlayImage);
 		}
 
-		private void Window_Loaded(object sender, RoutedEventArgs e)
-		{
-			this.WindowState = System.Windows.WindowState.Maximized;
-			ShowIndeterminateProgress("Obtaining list");
-			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
-			{
-				//Calls it to prevent delaying when obtaining list in future
-				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
-				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
-				HideIndeterminateProgress(null, true);
-			},
-			false);
-			ObtainApplicationList();
-		}
-
 		private void ForeachBuildapp(Action<BuildApplication> onBuildApp)
 		{
 			var items = tmpMainListbox.Items;
@@ -137,15 +138,23 @@ namespace BuildTestSystem
 
 		private void ObtainApplicationList()
 		{
-			radionButtonShowAll.IsChecked = true;
-			tmpMainListbox.Items.Clear();
-			var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
-			applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
-			foreach (var app in applicationlist)
+			Action act = delegate
 			{
-				//tmpMainListbox.Items.Add(app);
-				tmpMainListbox.Items.Add(new BuildApplication(app));
-			}
+				radionButtonShowAll.IsChecked = true;
+				tmpMainListbox.Items.Clear();
+				var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+				applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
+				foreach (var app in applicationlist)
+				{
+					//tmpMainListbox.Items.Add(app);
+					tmpMainListbox.Items.Add(new BuildApplication(app));
+				}
+			};
+
+			if (Thread.CurrentThread != this.Dispatcher.Thread)
+				this.Dispatcher.Invoke(act);
+			else
+				act();
 		}
 
 		bool isbusy = false;
@@ -194,7 +203,7 @@ namespace BuildTestSystem
 				};
 
 			if (separateThread)
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, buildapp, true);
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, buildapp, false);
 			else
 				checkForUpdatesAction(buildapp);
 		}
@@ -475,6 +484,14 @@ namespace BuildTestSystem
 			return buildapp;
 		}
 
+		private BuildApplication GetBuildApplicationFromApplicationName(string appname)
+		{
+			foreach (BuildApplication ba in tmpMainListbox.Items)
+				if (ba.ApplicationName.Equals(appname, StringComparison.InvariantCultureIgnoreCase))
+					return ba;
+			return null;
+		}
+
 		private void contextmenuitemRebuildThisApplication(object sender, RoutedEventArgs e)
 		{
 			//if (IsBusyBuilding(true))
@@ -543,8 +560,16 @@ namespace BuildTestSystem
 		{
 			var buildapplication = GetBuildApplicationFromMenuItem(sender);
 			if (null == buildapplication) return;
+			ShowIndeterminateProgress("Installing latest version of " + buildapplication.ApplicationName, buildapplication, false);
 			AutoUpdating.InstallLatest(buildapplication.ApplicationName,
-				err => UserMessages.ShowErrorMessage(err));
+				err => UserMessages.ShowErrorMessage(err),
+				(completeAppname) =>
+				{
+					var ba = GetBuildApplicationFromApplicationName(completeAppname);
+					AppCheckForUpdates(ba, true);
+					HideIndeterminateProgress(null, true);
+					HideIndeterminateProgress(ba, true);
+				});
 		}
 
 		private void contextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
