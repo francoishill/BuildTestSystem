@@ -123,7 +123,7 @@ namespace BuildTestSystem
 			ForeachBuildapp((ba) =>
 			{
 				var listboxItem = (ListBoxItem)tmpMainListbox.ItemContainerGenerator.ContainerFromItem(ba);
-				ContentPresenter myContentPresenter = WPFHelper.GetVisualChild<ContentPresenter>(listboxItem);
+				ContentPresenter myContentPresenter = listboxItem.FindVisualChild<ContentPresenter>();
 				DataTemplate myDataTemplate = myContentPresenter.ContentTemplate;
 				Border border = (Border)myDataTemplate.FindName("borderMainItemBorder", myContentPresenter);
 				if (border != null)
