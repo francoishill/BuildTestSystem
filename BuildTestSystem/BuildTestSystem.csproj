@@ -148,6 +148,9 @@
     <Compile Include="..\..\SharedClasses\Generics.cs">
       <Link>Generics.cs</Link>
     </Compile>
+    <Compile Include="..\..\SharedClasses\Helpers.cs">
+      <Link>Helpers.cs</Link>
+    </Compile>
     <Compile Include="..\..\SharedClasses\InputBoxWPF.xaml.cs">
       <Link>InputBoxWPF.xaml.cs</Link>
       <DependentUpon>InputBoxWPF.xaml</DependentUpon>
