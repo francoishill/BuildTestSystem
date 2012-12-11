@@ -153,6 +153,14 @@
 							 Name='radionButtonShowAll'
 							 IsChecked='True'
 							 Click='radioButtonShowAll_Click' />
+				<RadioButton Content='Selected'
+							 Name='radioButtonShowSelected'
+							 Margin='30 0 0 0'
+							 Click='radioButtonShowSelected_Click' />
+				<RadioButton Content='Unselected'
+							 Name='radioButtonShowUnselected'
+							 Margin='10 0 0 0'
+							 Click='radioButtonShowUnselected_Click' />
 				<RadioButton Content='Installed'
 							 Margin='30 0 0 0'
 							 Click='radioButtonShowInstalled_Click' />
@@ -181,7 +189,8 @@
 								Padding='3'
 								CornerRadius='5'
 								Focusable='False'
-								VerticalAlignment='Top'>
+								VerticalAlignment='Top'
+								MouseLeftButtonDown='borderMainItemBorder_MouseLeftButtonDown'>
 							<Border.ContextMenu>
 								<ContextMenu>
 									<MenuItem Header='Building'>
@@ -194,8 +203,8 @@
 										<MenuItem Header='Publish Online'
 												  Click='contextmenuPublishOnline' />
 										<MenuItem Header='Check for updates'
-												  Click='contextmenuCheckForUpdates'
-												  Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />
+												  Click='contextmenuCheckForUpdates'/>
+												  <!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->
 										<MenuItem Header='Install latest version (silently)'
 												  Click='contextmenuInstallLatestVersion' />
 									</MenuItem>
@@ -235,6 +244,15 @@
 											   Source='/BuildTestSystem;component/Resources/greentick.ico'
 											   ToolTip='Version controlled status'
 											   Opacity='{Binding IsVersionControlled,Mode=OneWay,Converter={StaticResource boolToOpacityConverter}}' />
+										<CheckBox Name='checkboxIsSelected'
+												  Content='Selected'
+												  IsChecked='{Binding IsSelected, Mode=TwoWay}'
+												  FontSize='14'
+												  FontWeight='Bold'
+												  Foreground='DarkViolet'
+												  VerticalAlignment='Center'
+												  VerticalContentAlignment='Center'
+												  Visibility='{Binding IsSelected, Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=HideInsteadOfCollapse}' />
 									</StackPanel>
 								</StackPanel>
 								<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
@@ -249,7 +267,19 @@
 							</DockPanel>
 						</Border>
 						<DataTemplate.Triggers>
-							<DataTrigger Binding="{Binding IsMouseOver,RelativeSource={RelativeSource TemplatedParent}}"
+							<DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource TemplatedParent}}"
+										 Value="True">
+								<!--<Setter Property="Background"
+											TargetName="borderMainItemBorder"
+											Value='{StaticResource ItemHoverBackgroundBrush}' />-->
+								<Setter Property='BorderBrush'
+										TargetName='borderMainItemBorder'
+										Value='#777' />
+								<Setter Property='Opacity'
+										TargetName='checkboxIsSelected'
+										Value='1' />
+							</DataTrigger>
+							<DataTrigger Binding="{Binding IsSelected}"
 										 Value="True">
 								<Setter Property="Background"
 										TargetName="borderMainItemBorder"
@@ -257,6 +287,9 @@
 								<Setter Property='BorderBrush'
 										TargetName='borderMainItemBorder'
 										Value='#777' />
+								<Setter Property='Opacity'
+										TargetName='checkboxIsSelected'
+										Value='1' />
 							</DataTrigger>
 						</DataTemplate.Triggers>
 					</DataTemplate>

@@ -475,11 +475,11 @@ namespace BuildTestSystem
 				this.Dispatcher.Invoke(act);
 		}
 
-		private BuildApplication GetBuildApplicationFromMenuItem(object potentialmenuitem)
+		private BuildApplication GetBuildApplicationFromFrameworkElement(object potentialFrameworkelement)
 		{
-			var menuitem = potentialmenuitem as MenuItem;
-			if (null == menuitem) return null;
-			var buildapp = menuitem.DataContext as BuildApplication;
+			var f = potentialFrameworkelement as FrameworkElement;
+			if (null == f) return null;
+			var buildapp = f.DataContext as BuildApplication;
 			if (null == buildapp) return null;
 			return buildapp;
 		}
@@ -492,153 +492,199 @@ namespace BuildTestSystem
 			return null;
 		}
 
+		private List<BuildApplication> GetBuildAppList_FromContextMenu(object sender)
+		{
+			List<BuildApplication> tmplist = new List<BuildApplication>();
+			ForeachBuildapp(
+				(ba) =>
+				{
+					if (ba.IsSelected == true)
+						tmplist.Add(ba);
+				});
+			//if (tmplist.Count == 0)//There were no selected items
+			//{
+			//Just always include current item
+			var buildapp = GetBuildApplicationFromFrameworkElement(sender);
+			if (buildapp != null)
+				if (!tmplist.Contains(buildapp))
+					tmplist.Add(buildapp);
+			//}
+			if (tmplist.Count == 0)
+				UserMessages.ShowWarningMessage("Warning could not GetBuildAppList_FromContextMenu");
+
+			if (buildapp != null && tmplist.Count > 1)
+			{
+				tmplist.RemoveAll(b => b != buildapp);
+				UserMessages.ShowWarningMessage("At this stage, some items (running on separate threads), like Rebuild, will not work with multiple selected items, removing all except the current item");
+			}
+
+			return tmplist;
+		}
+
 		private void contextmenuitemRebuildThisApplication(object sender, RoutedEventArgs e)
 		{
 			//if (IsBusyBuilding(true))
 			//    return;
 			//isbusy = true;
 
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-
-			ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, buildapp, false);
-			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
 			{
-				List<string> csprojPaths;
-				app.PerformBuild(null, out csprojPaths);
-				HideIndeterminateProgress(null, true);
-				HideIndeterminateProgress(app, true);
-				//isbusy = false;
-			},
-			buildapp,
-			false);
+				ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, buildapp, false);
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
+				{
+					List<string> csprojPaths;
+					app.PerformBuild(null, out csprojPaths);
+					HideIndeterminateProgress(null, true);
+					HideIndeterminateProgress(app, true);
+					//isbusy = false;
+				},
+				buildapp,
+				false);
+			}
 		}
 
 		private void contextmenuOpenWithCSharpExpress(object sender, RoutedEventArgs e)
 		{
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-			buildapp.OpenInCSharpExpress();
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
+			{
+				buildapp.OpenInCSharpExpress();
+			}
 		}
 
 		private void contextmenuPublishOnline(object sender, RoutedEventArgs e)
 		{
-			var buildapplication = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapplication) return;
-			MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
-			MainWindow.SetWindowProgressValue(0);
-
-			buildapplication.LastBuildFeedback = "";
-			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapplication in buildapps)
 			{
-				bool publishResult = buildapp.PerformPublishOnline(
-					(mess, messagetype) =>
-					{
-						switch (messagetype)
+				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
+				MainWindow.SetWindowProgressValue(0);
+
+				buildapplication.LastBuildFeedback = "";
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
+				{
+					bool publishResult = buildapp.PerformPublishOnline(
+						(mess, messagetype) =>
 						{
-							case FeedbackMessageTypes.Success: buildapp.AppendLastBuildFeedback(mess); break;
-							case FeedbackMessageTypes.Error: UserMessages.ShowErrorMessage(mess); break;
-							case FeedbackMessageTypes.Warning: UserMessages.ShowWarningMessage(mess); break;
-							case FeedbackMessageTypes.Status: buildapp.AppendLastBuildFeedback(mess); break;
-							default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
-						}
-					},
-					progperc => MainWindow.SetWindowProgressValue((double)progperc / 100D));
-			},
-			buildapplication,
-			false);
+							switch (messagetype)
+							{
+								case FeedbackMessageTypes.Success: buildapp.AppendLastBuildFeedback(mess); break;
+								case FeedbackMessageTypes.Error: UserMessages.ShowErrorMessage(mess); break;
+								case FeedbackMessageTypes.Warning: UserMessages.ShowWarningMessage(mess); break;
+								case FeedbackMessageTypes.Status: buildapp.AppendLastBuildFeedback(mess); break;
+								default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
+							}
+						},
+						progperc => MainWindow.SetWindowProgressValue((double)progperc / 100D));
+				},
+				buildapplication,
+				false);
+			}
 		}
 
 		private void contextmenuCheckForUpdates(object sender, RoutedEventArgs e)
 		{
-			var buildapplication = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapplication) return;
-			AppCheckForUpdates(buildapplication, true);
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
+			{
+				AppCheckForUpdates(buildapp, true);
+			}
 		}
 
 		private void contextmenuInstallLatestVersion(object sender, RoutedEventArgs e)
 		{
-			var buildapplication = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapplication) return;
-			ShowIndeterminateProgress("Installing latest version of " + buildapplication.ApplicationName, buildapplication, false);
-			AutoUpdating.InstallLatest(buildapplication.ApplicationName,
-				err => UserMessages.ShowErrorMessage(err),
-				(completeAppname) =>
-				{
-					var ba = GetBuildApplicationFromApplicationName(completeAppname);
-					AppCheckForUpdates(ba, true);
-					HideIndeterminateProgress(null, true);
-					HideIndeterminateProgress(ba, true);
-				});
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
+			{
+				ShowIndeterminateProgress("Installing latest version of " + buildapp.ApplicationName, buildapp, false);
+				AutoUpdating.InstallLatest(buildapp.ApplicationName,
+					err => UserMessages.ShowErrorMessage(err),
+					(completeAppname) =>
+					{
+						var ba = GetBuildApplicationFromApplicationName(completeAppname);
+						AppCheckForUpdates(ba, true);
+						HideIndeterminateProgress(null, true);
+						HideIndeterminateProgress(ba, true);
+					});
+			}
 		}
 
 		private void contextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
 		{
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-			if (buildapp.IsVersionControlled != true)
-				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
-			else
-				AppCheckForSubversionChanges(buildapp, true);
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
+			{
+				if (buildapp.IsVersionControlled != true)
+					UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+				else
+					AppCheckForSubversionChanges(buildapp, true);
+			}
 		}
 
 		private void contextmenuSubversionUpdate(object sender, RoutedEventArgs e)
 		{
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-			if (buildapp.IsVersionControlled != true)
-				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
-			else
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
 			{
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
-					(b) =>
-					{
-						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, buildapp.GetSolutionDirectory());
-						p.WaitForExit();
-						AppCheckForSubversionChanges(b);
-					},
-					buildapp,
-					false);
+				if (buildapp.IsVersionControlled != true)
+					UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+				else
+				{
+					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+						(b) =>
+						{
+							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, buildapp.GetSolutionDirectory());
+							p.WaitForExit();
+							AppCheckForSubversionChanges(b);
+						},
+						buildapp,
+						false);
+				}
 			}
 		}
 
 		private void contextmenuShowSubversionLog(object sender, RoutedEventArgs e)
 		{
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-			if (buildapp.IsVersionControlled != true)
-				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
-			else
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
 			{
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
-					(b) =>
-					{
-						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, buildapp.GetSolutionDirectory());
-						p.WaitForExit();
-						AppCheckForSubversionChanges(b);
-					},
-					buildapp,
-					false);
+				if (buildapp.IsVersionControlled != true)
+					UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+				else
+				{
+					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+						(b) =>
+						{
+							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, buildapp.GetSolutionDirectory());
+							p.WaitForExit();
+							AppCheckForSubversionChanges(b);
+						},
+						buildapp,
+						false);
+				}
 			}
 		}
 
 		private void contextmenuSubversionCommitChanges(object sender, RoutedEventArgs e)
 		{
-			var buildapp = GetBuildApplicationFromMenuItem(sender);
-			if (null == buildapp) return;
-			if (buildapp.IsVersionControlled != true)
-				UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
-			else
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var buildapp in buildapps)
 			{
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
-					(b) =>
-					{
-						Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, buildapp.GetSolutionDirectory());
-						p.WaitForExit();
-						AppCheckForSubversionChanges(b);
-					},
-					buildapp,
-					false);
+				if (buildapp.IsVersionControlled != true)
+					UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
+				else
+				{
+					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
+						(b) =>
+						{
+							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, buildapp.GetSolutionDirectory());
+							p.WaitForExit();
+							AppCheckForSubversionChanges(b);
+						},
+						buildapp,
+						false);
+				}
 			}
 		}
 
@@ -652,56 +698,61 @@ namespace BuildTestSystem
 			});
 		}
 
-		private void radioButtonShowAll_Click(object sender, RoutedEventArgs e)
+		private void ShowApplicationsBasedOnPredicate(Predicate<BuildApplication> predicate)
 		{
 			ForeachBuildappBorder((ba, border) =>
 			{
-				border.Visibility = System.Windows.Visibility.Visible;
+				if (predicate(ba))
+					border.Visibility = System.Windows.Visibility.Visible;
+				else
+					border.Visibility = System.Windows.Visibility.Collapsed;
 			});
+		}
+
+		private void radioButtonShowAll_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => true);
 		}
 
 		private void radioButtonShowInstalled_Click(object sender, RoutedEventArgs e)
 		{
-			ForeachBuildappBorder((ba, border) =>
-			{
-				if (ba.IsInstalled == true)
-					border.Visibility = System.Windows.Visibility.Visible;
-				else
-					border.Visibility = System.Windows.Visibility.Collapsed;
-			});
+			ShowApplicationsBasedOnPredicate(ba => ba.IsInstalled == true);
 		}
 
 		private void radioButtonShowUninstalled_Click(object sender, RoutedEventArgs e)
 		{
-			ForeachBuildappBorder((ba, border) =>
-			{
-				if (!ba.IsInstalled == true)
-					border.Visibility = System.Windows.Visibility.Visible;
-				else
-					border.Visibility = System.Windows.Visibility.Collapsed;
-			});
+			ShowApplicationsBasedOnPredicate(ba => ba.IsInstalled != true);
 		}
 
 		private void radioButtonShowVersioncontrolled_Click(object sender, RoutedEventArgs e)
 		{
-			ForeachBuildappBorder((ba, border) =>
-			{
-				if (ba.IsVersionControlled == true)
-					border.Visibility = System.Windows.Visibility.Visible;
-				else
-					border.Visibility = System.Windows.Visibility.Collapsed;
-			});
+			ShowApplicationsBasedOnPredicate(ba => ba.IsVersionControlled == true);
 		}
 
 		private void radioButtonShowUnversioncontrolled_Click(object sender, RoutedEventArgs e)
 		{
-			ForeachBuildappBorder((ba, border) =>
-			{
-				if (!ba.IsVersionControlled == true)
-					border.Visibility = System.Windows.Visibility.Visible;
-				else
-					border.Visibility = System.Windows.Visibility.Collapsed;
-			});
+			ShowApplicationsBasedOnPredicate(ba => ba.IsVersionControlled != true);
+		}
+
+		private void radioButtonShowSelected_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsSelected == true);
+		}
+
+		private void radioButtonShowUnselected_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsSelected != true);
+		}
+
+		private void borderMainItemBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			BuildApplication ba = GetBuildApplicationFromFrameworkElement(sender);
+			if (ba == null) return;
+			ba.IsSelected = ba.IsSelected != true;
+			if (radioButtonShowSelected.IsChecked == true)
+				ShowApplicationsBasedOnPredicate(b => b.IsSelected == true);
+			else if (radioButtonShowUnselected.IsChecked == true)
+				ShowApplicationsBasedOnPredicate(b => b.IsSelected != true);
 		}
 	}
 
@@ -718,12 +769,18 @@ namespace BuildTestSystem
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
 		public bool? IsVersionControlled { get { return DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
+		private bool? _isselected;
+		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged("IsSelected"); } }
+
 		private int? _currentprogressPprcentage;
 		public int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged("CurrentProgressPercentage"); } }
 
 		public BuildApplication(string ApplicationName, Action<string> actionOnError = null)
 			: base(ApplicationName, null, actionOnError)
-		{ CurrentProgressPercentage = 0; }
+		{
+			this.CurrentProgressPercentage = 0;
+			this.IsSelected = false;
+		}
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
