@@ -104,25 +104,28 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\BuildingInterop.cs">
+    <Compile Include="..\..\SharedClasses\BuildingInterop.cs">
       <Link>BuildingInterop.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\ConvertersGeneral.cs">
+    <Compile Include="..\..\SharedClasses\ConvertersGeneral.cs">
       <Link>ConvertersGeneral.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\Logging.cs">
+    <Compile Include="..\..\SharedClasses\Logging.cs">
       <Link>Logging.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\NetworkInteropSimple.cs">
+    <Compile Include="..\..\SharedClasses\NetworkInteropSimple.cs">
       <Link>NetworkInteropSimple.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\NsisInterop.cs">
+    <Compile Include="..\..\SharedClasses\NsisInterop.cs">
       <Link>NsisInterop.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\RegistryInterop.cs">
+    <Compile Include="..\..\SharedClasses\RegexInterop.cs">
+      <Link>RegexInterop.cs</Link>
+    </Compile>
+    <Compile Include="..\..\SharedClasses\RegistryInterop.cs">
       <Link>RegistryInterop.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\..\..\..\..\Francois\Dev\VSprojects\SharedClasses\StringExtensions.cs">
+    <Compile Include="..\..\SharedClasses\StringExtensions.cs">
       <Link>StringExtensions.cs</Link>
     </Compile>
     <Compile Include="..\..\SharedClasses\AboutWindow2.xaml.cs">
