@@ -98,7 +98,8 @@ namespace BuildTestSystem
 						+ Environment.NewLine + "Stack trace: " + exception.StackTrace);
 			};
 
-			SharedClasses.AutoUpdating.CheckForUpdates(null, null, true);
+			SharedClasses.AutoUpdating.CheckForUpdates_ExceptionHandler();
+			//SharedClasses.AutoUpdating.CheckForUpdates(null, null, true);
 
 			List<string> args = Environment.GetCommandLineArgs().ToList();
 			args.RemoveAt(0);

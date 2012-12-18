@@ -174,12 +174,12 @@
 							 Margin='10 0 0 0'
 							 Click='radioButtonShowUnversioncontrolled_Click' />
 			</StackPanel>
-			<ListBox Name='tmpMainListbox'
-					 Margin='10 55 10 0'
-					 BorderThickness='0'
-					 FontSize='20'
-					 ScrollViewer.CanContentScroll='False'>
-				<ListBox.ItemTemplate>
+			<TreeView Name='tmpMainListbox'
+					  Margin='10 55 10 0'
+					  BorderThickness='0'
+					  FontSize='20'
+					  ScrollViewer.CanContentScroll='False'>
+				<TreeView.ItemTemplate>
 					<DataTemplate>
 						<Border Name='borderMainItemBorder'
 								Background='{Binding LastBuildResult, Converter={StaticResource boolToBrushConverter}}'
@@ -203,8 +203,8 @@
 										<MenuItem Header='Publish Online'
 												  Click='contextmenuPublishOnline' />
 										<MenuItem Header='Check for updates'
-												  Click='contextmenuCheckForUpdates'/>
-												  <!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->
+												  Click='contextmenuCheckForUpdates' />
+										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->
 										<MenuItem Header='Install latest version (silently)'
 												  Click='contextmenuInstallLatestVersion' />
 									</MenuItem>
@@ -293,14 +293,14 @@
 							</DataTrigger>
 						</DataTemplate.Triggers>
 					</DataTemplate>
-				</ListBox.ItemTemplate>
-				<ListBox.ItemContainerStyle>
-					<Style TargetType="{x:Type ListBoxItem}">
+				</TreeView.ItemTemplate>
+				<TreeView.ItemContainerStyle>
+					<Style TargetType="{x:Type TreeViewItem}">
 						<Setter Property="Focusable"
 								Value="False" />
 					</Style>
-				</ListBox.ItemContainerStyle>
-				<ListBox.ItemsPanel>
+				</TreeView.ItemContainerStyle>
+				<TreeView.ItemsPanel>
 					<ItemsPanelTemplate>
 						<WrapPanel IsItemsHost='True'
 								   Width='{Binding (FrameworkElement.ActualWidth),
@@ -311,8 +311,8 @@
 								   ItemHeight='{Binding (ListView.View).ItemHeight,
                      RelativeSource={RelativeSource AncestorType=ListView}}'></WrapPanel>
 					</ItemsPanelTemplate>
-				</ListBox.ItemsPanel>
-			</ListBox>
+				</TreeView.ItemsPanel>
+			</TreeView>
 		</Grid>
 	</DockPanel>
 </Window>

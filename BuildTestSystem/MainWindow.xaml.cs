@@ -767,7 +767,7 @@ namespace BuildTestSystem
 		private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
-		public bool? IsVersionControlled { get { return DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
+		public bool? IsVersionControlled { get { return OwnAppsInterop.DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
 		private bool? _isselected;
 		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged("IsSelected"); } }
@@ -784,13 +784,6 @@ namespace BuildTestSystem
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
-
-		private bool DirIsValidSvnPath(string dir)
-		{
-			if (!Directory.Exists(dir))
-				return false;
-			return Directory.Exists(System.IO.Path.Combine(dir, ".svn"));
-		}
 
 		public void OpenInCSharpExpress()
 		{
