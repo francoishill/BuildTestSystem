@@ -84,7 +84,7 @@ namespace BuildTestSystem
 			//Console.Out.Close();
 			//Environment.Exit(0);
 
-			AppDomain.CurrentDomain.UnhandledException += (snder, exc) =>
+			/*AppDomain.CurrentDomain.UnhandledException += (snder, exc) =>
 			{
 				Exception exception = (Exception)exc.ExceptionObject;
 				//ShowError("Exception" + (exc.IsTerminating ? ", application will now exit" : "") + ":"
@@ -96,7 +96,7 @@ namespace BuildTestSystem
 				}
 				UserMessages.ShowErrorMessage("Unhandled exception: " + exception.Message
 						+ Environment.NewLine + "Stack trace: " + exception.StackTrace);
-			};
+			};*/
 
 			SharedClasses.AutoUpdating.CheckForUpdates_ExceptionHandler();
 			//SharedClasses.AutoUpdating.CheckForUpdates(null, null, true);

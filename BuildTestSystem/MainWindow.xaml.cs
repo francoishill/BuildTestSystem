@@ -109,7 +109,7 @@ namespace BuildTestSystem
 
 		private void ForeachBuildapp(Action<BuildApplication> onBuildApp)
 		{
-			var items = tmpMainListbox.Items;
+			var items = tmpMainTreeview.Items;
 			for (int i = 0; i < items.Count; i++)
 			{
 				BuildApplication buildapp = items[i] as BuildApplication;
@@ -122,8 +122,8 @@ namespace BuildTestSystem
 		{
 			ForeachBuildapp((ba) =>
 			{
-				var listboxItem = (ListBoxItem)tmpMainListbox.ItemContainerGenerator.ContainerFromItem(ba);
-				ContentPresenter myContentPresenter = listboxItem.FindVisualChild<ContentPresenter>();
+				var treeviewItem = (TreeViewItem)tmpMainTreeview.ItemContainerGenerator.ContainerFromItem(ba);
+				ContentPresenter myContentPresenter = treeviewItem.FindVisualChild<ContentPresenter>();
 				DataTemplate myDataTemplate = myContentPresenter.ContentTemplate;
 				Border border = (Border)myDataTemplate.FindName("borderMainItemBorder", myContentPresenter);
 				if (border != null)
@@ -141,13 +141,13 @@ namespace BuildTestSystem
 			Action act = delegate
 			{
 				radionButtonShowAll.IsChecked = true;
-				tmpMainListbox.Items.Clear();
+				tmpMainTreeview.Items.Clear();
 				var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
 				applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
 				foreach (var app in applicationlist)
 				{
 					//tmpMainListbox.Items.Add(app);
-					tmpMainListbox.Items.Add(new BuildApplication(app));
+					tmpMainTreeview.Items.Add(new BuildApplication(app));
 				}
 			};
 
@@ -244,7 +244,7 @@ namespace BuildTestSystem
 			ShowIndeterminateProgress("Starting to build applications, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
-				var items = tmpMainListbox.Items;
+				var items = tmpMainTreeview.Items;
 				List<BuildApplication> applist = new List<BuildApplication>();
 				//List<string> appswithErrors = new List<string>();
 				for (int i = 0; i < items.Count; i++)
@@ -325,7 +325,7 @@ namespace BuildTestSystem
 			ShowIndeterminateProgress("Starting to check applications for updates, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
-				var items = tmpMainListbox.Items;
+				var items = tmpMainTreeview.Items;
 				List<string> appswithErrors = new List<string>();
 				for (int i = 0; i < items.Count; i++)
 				{
@@ -388,7 +388,7 @@ namespace BuildTestSystem
 			ShowIndeterminateProgress("Starting to check version control statusses, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
-				var items = tmpMainListbox.Items;
+				var items = tmpMainTreeview.Items;
 				List<string> appswithErrors = new List<string>();
 				for (int i = 0; i < items.Count; i++)
 				{
@@ -486,7 +486,7 @@ namespace BuildTestSystem
 
 		private BuildApplication GetBuildApplicationFromApplicationName(string appname)
 		{
-			foreach (BuildApplication ba in tmpMainListbox.Items)
+			foreach (BuildApplication ba in tmpMainTreeview.Items)
 				if (ba.ApplicationName.Equals(appname, StringComparison.InvariantCultureIgnoreCase))
 					return ba;
 			return null;
@@ -693,8 +693,7 @@ namespace BuildTestSystem
 			AboutWindow2.ShowAboutWindow(new System.Collections.ObjectModel.ObservableCollection<DisplayItem>()
 			{
 				new DisplayItem("Author", "Francois Hill"),
-				new DisplayItem("Icon obtained from", "http://www.icons-land.com", "http://www.icons-land.com/vista-base-software-icons.php")
-
+				new DisplayItem("Icon(s) obtained from", "http://www.icons-land.com", "http://www.icons-land.com/vista-base-software-icons.php")
 			});
 		}
 

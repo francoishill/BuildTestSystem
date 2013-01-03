@@ -174,7 +174,7 @@
 							 Margin='10 0 0 0'
 							 Click='radioButtonShowUnversioncontrolled_Click' />
 			</StackPanel>
-			<TreeView Name='tmpMainListbox'
+			<TreeView Name='tmpMainTreeview'
 					  Margin='10 55 10 0'
 					  BorderThickness='0'
 					  FontSize='20'
