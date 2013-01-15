@@ -555,6 +555,11 @@ namespace BuildTestSystem
 
 		private void contextmenuPublishOnline(object sender, RoutedEventArgs e)
 		{
+			BuildFromBuildappSender(sender);//, false);
+		}
+
+		private void BuildFromBuildappSender(object sender)//, bool _32bitOnly = false)
+		{
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapplication in buildapps)
 			{
@@ -570,8 +575,8 @@ namespace BuildTestSystem
 							switch (messagetype)
 							{
 								case FeedbackMessageTypes.Success: buildapp.AppendLastBuildFeedback(mess); break;
-								case FeedbackMessageTypes.Error: UserMessages.ShowErrorMessage(mess); break;
-								case FeedbackMessageTypes.Warning: UserMessages.ShowWarningMessage(mess); break;
+								case FeedbackMessageTypes.Error: buildapp.AppendLastBuildFeedback("ERROR: " + mess); break;//UserMessages.ShowErrorMessage(mess); break;
+								case FeedbackMessageTypes.Warning: buildapp.AppendLastBuildFeedback("WARNING: " + mess); break; //UserMessages.ShowWarningMessage(mess); break;
 								case FeedbackMessageTypes.Status: buildapp.AppendLastBuildFeedback(mess); break;
 								default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
 							}
