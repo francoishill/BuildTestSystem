@@ -353,9 +353,11 @@ namespace BuildTestSystem
 					now.Subtract(File.GetLastWriteTime(file)).TotalDays >= 1
 					&& shouldDeleteCheckFilenameOnly(Path.GetFileName(file)))
 				{
-					//TODO: No logging of caught exception
 					try { File.Delete(file); }
-					catch { }
+					catch (Exception exc)
+					{
+						UserMessages.ShowErrorMessage("Could not delete file, message: " + exc.Message);
+					}
 				}
 		}
 
