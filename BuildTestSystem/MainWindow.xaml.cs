@@ -1,28 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using SharedClasses;
-using System.ComponentModel;
-using System.IO;
-using System.Diagnostics;
-using Microsoft.Build;
-using Microsoft.Build.Execution;
-using Microsoft.Build.Evaluation;
-using Microsoft.Build.Framework;
-using System.Threading.Tasks;
 using System.Windows.Shell;
-using System.Windows.Interop;
-using System.Windows.Threading;
-using System.Threading;
+using SharedClasses;
 
 namespace BuildTestSystem
 {
@@ -34,6 +26,8 @@ namespace BuildTestSystem
 		private static TaskbarItemInfo WindowTaskBarItem;
 		private static MainWindow windowInstance;
 
+		private ObservableCollection<BuildApplication> applicationList = new ObservableCollection<BuildApplication>();
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -42,6 +36,8 @@ namespace BuildTestSystem
 			windowInstance = this;
 
 			this.TaskbarItemInfo.Overlay = (DrawingImage)this.Resources["overlayImageSucccess"];
+
+			tmpMainTreeview.ItemsSource = applicationList;
 		}
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -72,7 +68,7 @@ namespace BuildTestSystem
 		public enum OverlayImage { Success, BuildFailed, NotUpToDate, VersionControlChanges };
 		public static void SetWindowProgressState(TaskbarItemProgressState progressState, OverlayImage? overlayImage = null)
 		{
-			windowInstance.Dispatcher.Invoke((Action<TaskbarItemProgressState, OverlayImage>)(
+			windowInstance.Dispatcher.Invoke((Action<TaskbarItemProgressState, OverlayImage?>)(
 				(state, image) =>
 				{
 					WindowTaskBarItem.ProgressState = state;
@@ -141,14 +137,24 @@ namespace BuildTestSystem
 			Action act = delegate
 			{
 				radionButtonShowAll.IsChecked = true;
-				tmpMainTreeview.Items.Clear();
-				var applicationlist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
-				applicationlist.Sort(StringComparer.InvariantCultureIgnoreCase);
-				foreach (var app in applicationlist)
+				//tmpMainTreeview.Items.Clear();
+				var applist = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+				applist.Sort(StringComparer.InvariantCultureIgnoreCase);
+				foreach (var app in applist)
 				{
-					//tmpMainListbox.Items.Add(app);
-					tmpMainTreeview.Items.Add(new BuildApplication(app));
+					var newApp = new BuildApplication(app, err => statusLabel.Text = err);
+					//tmpMainListbox.Items.Add(newApp);
+					//tmpMainTreeview.Items.Add(new BuildApplication(newApp));
+					newApp.PropertyChanged += (sn, pn) =>
+					{
+						if (pn.PropertyName.Equals("IsSelected", StringComparison.InvariantCultureIgnoreCase))
+						{
+							UpdateControlsAffectedBySelection();
+						}
+					};
+					applicationList.Add(newApp);
 				}
+				UpdateControlsAffectedBySelection();
 			};
 
 			if (Thread.CurrentThread != this.Dispatcher.Thread)
@@ -157,12 +163,19 @@ namespace BuildTestSystem
 				act();
 		}
 
-		bool isbusy = false;
-		private bool IsBusyBuilding(bool showErrorIfBusy = true)
+		private void UpdateControlsAffectedBySelection()
 		{
-			if (isbusy)
-				UserMessages.ShowWarningMessage("Cannot build, another build already in progress");
-			return isbusy;
+			int selectedCount = applicationList.Count(a => a.IsSelected == true);
+			int unselectedCount = applicationList.Count(a => a.IsSelected == false);
+			buttonUnselectAll.Visibility =
+				selectedCount > 0
+				? Visibility.Visible
+				: Visibility.Hidden;
+			buttonSelectAll.Visibility =
+				unselectedCount > 0
+				? Visibility.Visible
+				: Visibility.Hidden;
+			textblockSelectedCount.Text = string.Format("{0}/{1} selected", selectedCount, applicationList.Count);
 		}
 
 		private static void AppCheckForUpdates(BuildApplication buildapp, bool separateThread = true)
@@ -237,25 +250,31 @@ namespace BuildTestSystem
 
 		private void buttonBuildAll_Click(object sender, RoutedEventArgs e)
 		{
-			if (IsBusyBuilding(true))
+			BuildListOfApplications(applicationList);
+		}
+
+		private void BuildListOfApplications(IEnumerable<BuildApplication> listOfAppsToBuild)
+		{
+			if (BuildApplication.IsBusyBuilding(true))
 				return;
-			isbusy = true;
+			BuildApplication.SetIsBusyBuildingTrue(true);
 
 			ShowIndeterminateProgress("Starting to build applications, please wait...");
-			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
-			{
-				var items = tmpMainTreeview.Items;
-				List<BuildApplication> applist = new List<BuildApplication>();
-				//List<string> appswithErrors = new List<string>();
-				for (int i = 0; i < items.Count; i++)
-				{
-					BuildApplication buildapp = items[i] as BuildApplication;
-					buildapp.LastBuildFeedback = null;
-					buildapp.HasFeedbackText = false;
-					buildapp.LastBuildResult = null;
-					applist.Add(buildapp);
-				}
 
+			//var items = tmpMainTreeview.Items;
+			//List<BuildApplication> applist = new List<BuildApplication>();
+			////List<string> appswithErrors = new List<string>();
+			//for (int i = 0; i < items.Count; i++)
+			//{
+			//    BuildApplication buildapp = items[i] as BuildApplication;
+			//    buildapp.LastBuildFeedback = null;
+			//    buildapp.HasFeedbackText = false;
+			//    buildapp.LastBuildResult = null;
+			//    applist.Add(buildapp);
+			//}
+
+			ThreadingInterop.PerformOneArgFunctionSeperateThread<IEnumerable<BuildApplication>>((applist) =>
+			{
 				MainWindow.SetWindowProgressValue(0);
 				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 
@@ -280,27 +299,10 @@ namespace BuildTestSystem
 							MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 						}
 						HideIndeterminateProgress((BuildApplication)appwhichbuildcomplete, true);
-						MainWindow.SetWindowProgressValue(((double)(++completeCount)) / (double)items.Count);
+						MainWindow.SetWindowProgressValue(((double)(++completeCount)) / (double)listOfAppsToBuild.Count());
 					});
 				var appswithErrors = allBuildResult.Keys.Where(k => !allBuildResult[k]).Select(k => k.ApplicationName).ToList();
-				//for (int i = 0; i < items.Count; i++)
-				/*Parallel.For(0, items.Count - 1, (i) =>
-				{
-					BuildApplication buildapp = items[i] as BuildApplication;
-					ShowIndeterminateProgress("Building application: " + buildapp.ApplicationName, buildapp, true);
-					Stopwatch sw = Stopwatch.StartNew();
-					List<string> csprojPaths;
-					string err;
-					bool buildSuccess = buildapp.PerformBuild(out csprojPaths, out err);
-					Logging.LogInfoToFile(string.Format("Duration to build {0} was {1} seconds.", buildapp.ApplicationName, sw.Elapsed.TotalSeconds), Logging.ReportingFrequencies.Daily, "BuildTestSystem", "Benchmarks");
-					if (!buildSuccess)
-					{
-						appswithErrors.Add(buildapp.ApplicationName);
-						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
-					}
-					HideIndeterminateProgress(buildapp, true);
-					MainWindow.SetWindowProgressValue(((double)(i + 1)) / (double)items.Count);
-				});*/
+
 				if (appswithErrors.Count > 0)
 				{
 					MainWindow.SetWindowProgressValue(1);
@@ -311,16 +313,17 @@ namespace BuildTestSystem
 				else
 					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
-				isbusy = false;
+				BuildApplication.SetIsBusyBuildingTrue(false);
 			},
+			listOfAppsToBuild,
 			false);
 		}
 
 		private void buttonCheckForUpdatesAll_Click(object sender, RoutedEventArgs e)
 		{
-			if (IsBusyBuilding(true))
+			if (BuildApplication.IsBusyBuilding(true))
 				return;
-			isbusy = true;
+			BuildApplication.SetIsBusyBuildingTrue(true);
 
 			ShowIndeterminateProgress("Starting to check applications for updates, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
@@ -374,16 +377,16 @@ namespace BuildTestSystem
 				else
 					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
-				isbusy = false;
+				BuildApplication.SetIsBusyBuildingTrue(false);
 			},
 			false);
 		}
 
 		private void buttonCheckVersioningStatusAll_Click(object sender, RoutedEventArgs e)
 		{
-			if (IsBusyBuilding(true))
+			if (BuildApplication.IsBusyBuilding(true))
 				return;
-			isbusy = true;
+			BuildApplication.SetIsBusyBuildingTrue(true);
 
 			ShowIndeterminateProgress("Starting to check version control statusses, please wait...");
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
@@ -437,7 +440,7 @@ namespace BuildTestSystem
 				else
 					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
-				isbusy = false;
+				BuildApplication.SetIsBusyBuildingTrue(false);
 			},
 			false);
 		}
@@ -492,7 +495,7 @@ namespace BuildTestSystem
 			return null;
 		}
 
-		private List<BuildApplication> GetBuildAppList_FromContextMenu(object sender)
+		private List<BuildApplication> GetBuildAppList_FromContextMenu(object sender, bool returnOnlyOneItem = false)
 		{
 			List<BuildApplication> tmplist = new List<BuildApplication>();
 			ForeachBuildapp(
@@ -512,10 +515,13 @@ namespace BuildTestSystem
 			if (tmplist.Count == 0)
 				UserMessages.ShowWarningMessage("Warning could not GetBuildAppList_FromContextMenu");
 
-			if (buildapp != null && tmplist.Count > 1)
+			if (returnOnlyOneItem)
 			{
-				tmplist.RemoveAll(b => b != buildapp);
-				UserMessages.ShowWarningMessage("At this stage, some items (running on separate threads), like Rebuild, will not work with multiple selected items, removing all except the current item");
+				if (buildapp != null && tmplist.Count > 1)
+				{
+					tmplist.RemoveAll(b => b != buildapp);
+					UserMessages.ShowWarningMessage("At this stage, some items (running on separate threads), like Rebuild, will not work with multiple selected items, removing all except the current item");
+				}
 			}
 
 			return tmplist;
@@ -528,7 +534,9 @@ namespace BuildTestSystem
 			//isbusy = true;
 
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
-			foreach (var buildapp in buildapps)
+			BuildListOfApplications(buildapps);
+
+			/*foreach (var buildapp in buildapps)
 			{
 				ShowIndeterminateProgress("Building application " + buildapp.ApplicationName, buildapp, false);
 				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((app) =>
@@ -541,7 +549,7 @@ namespace BuildTestSystem
 				},
 				buildapp,
 				false);
-			}
+			}*/
 		}
 
 		private void contextmenuOpenWithCSharpExpress(object sender, RoutedEventArgs e)
@@ -555,37 +563,29 @@ namespace BuildTestSystem
 
 		private void contextmenuPublishOnline(object sender, RoutedEventArgs e)
 		{
-			BuildFromBuildappSender(sender);//, false);
+			var buildapps = GetBuildAppList_FromContextMenu(sender, true);
+			foreach (var buildapp in buildapps)
+				PublishApp(buildapp);//, false);
 		}
 
-		private void BuildFromBuildappSender(object sender)//, bool _32bitOnly = false)
+		private void PublishApp(BuildApplication buildapplication)//, bool _32bitOnly = false)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
-			foreach (var buildapplication in buildapps)
-			{
-				MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
-				MainWindow.SetWindowProgressValue(0);
+			//var buildapps = GetBuildAppList_FromContextMenu(sender);
+			//foreach (var buildapplication in buildapps)
+			//{
+			MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
+			MainWindow.SetWindowProgressValue(0);
 
-				buildapplication.LastBuildFeedback = "";
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
-				{
-					bool publishResult = buildapp.PerformPublishOnline(
-						(mess, messagetype) =>
-						{
-							switch (messagetype)
-							{
-								case FeedbackMessageTypes.Success: buildapp.AppendLastBuildFeedback(mess); break;
-								case FeedbackMessageTypes.Error: buildapp.AppendLastBuildFeedback("ERROR: " + mess); break;//UserMessages.ShowErrorMessage(mess); break;
-								case FeedbackMessageTypes.Warning: buildapp.AppendLastBuildFeedback("WARNING: " + mess); break; //UserMessages.ShowWarningMessage(mess); break;
-								case FeedbackMessageTypes.Status: buildapp.AppendLastBuildFeedback(mess); break;
-								default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + messagetype.ToString()); break;
-							}
-						},
-						progperc => MainWindow.SetWindowProgressValue((double)progperc / 100D));
-				},
-				buildapplication,
-				false);
-			}
+			buildapplication.LastBuildFeedback = "";
+			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>((buildapp) =>
+			{
+				bool publishResult = buildapp.PerformPublishOnline(
+					(mess, messagetype) => FeedbackMessageAction(buildapp, mess, messagetype),
+					progperc => MainWindow.SetWindowProgressValue((double)progperc / 100D));
+			},
+			buildapplication,
+			false);
+			//}
 		}
 
 		private void contextmenuCheckForUpdates(object sender, RoutedEventArgs e)
@@ -613,6 +613,98 @@ namespace BuildTestSystem
 						HideIndeterminateProgress(ba, true);
 					});
 			}
+		}
+
+		private void FeedbackMessageAction(BuildApplication buildapp, string message, FeedbackMessageTypes feedbackType)
+		{
+			string mes = message;
+			switch (feedbackType)
+			{
+				case FeedbackMessageTypes.Success: mes = message; break;
+				case FeedbackMessageTypes.Error: mes = "ERROR: " + message; break;//UserMessages.ShowErrorMessage(mess); break;
+				case FeedbackMessageTypes.Warning: mes = "WARNING: " + message; break; //UserMessages.ShowWarningMessage(mess); break;
+				case FeedbackMessageTypes.Status: mes = message; break;
+				default: UserMessages.ShowWarningMessage("Cannot use messagetype = " + feedbackType.ToString()); break;
+			}
+			if (buildapp == null)
+				this.Dispatcher.Invoke((Action)delegate { statusLabel.Text = mes; });
+			else
+				buildapp.AppendLastBuildFeedback(mes);
+		}
+
+		private void contextmenuitemGetChangeLogs_OnlyAfterPreviousPublish_Click(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			GetChangelogsForBuildapps(buildapps, true);
+		}
+
+		private void contextmenuitemGetChangeLogs_All_Click(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			GetChangelogsForBuildapps(buildapps, false);
+		}
+
+		private bool actionOnAppsAlreadyBusy = false;
+		private void GetChangelogsForBuildapps(List<BuildApplication> buildapps, bool onlyAfterPreviousPublish)
+		{
+			if (actionOnAppsAlreadyBusy)
+			{
+				UserMessages.ShowInfoMessage("Another action is already busy, please be patient...");
+				return;
+			}
+			actionOnAppsAlreadyBusy = true;
+
+			ThreadingInterop.DoAction(delegate
+			{
+				try
+				{
+					Parallel.ForEach<BuildApplication>(
+						buildapps,
+						(buildapp) =>
+						//foreach (var buildapp in buildapps)
+						{
+							DateTime? changelogsSinceDate = null;
+							if (onlyAfterPreviousPublish)
+							{
+								if (!PublishInterop.ObtainPreviouslyPublishedDate(
+									buildapp.ApplicationName,
+									(mess, messagetype) => FeedbackMessageAction(buildapp, mess, messagetype),
+									out changelogsSinceDate))
+									return;//continue;
+							}
+
+							/*List<string> BugsFixed = null;
+							List<string> Improvements = null;
+							List<string> NewFeatures = null;*/
+							var changeLogs =PublishInterop.GetChangeLogs(
+								changelogsSinceDate,
+								buildapp.ApplicationName,
+								(mes, msgtype) => { FeedbackMessageAction(null, mes, msgtype); });
+							if (changeLogs == null)
+								return;
+
+							foreach (var bugKey in changeLogs.BugsFixed.Keys)
+								buildapp.AppendLastBuildFeedback("BUG fixed: " + changeLogs.BugsFixed[bugKey].Summary
+									+ " (" + changeLogs.BugsFixed[bugKey].Description + ") - " + string.Join(". ", changeLogs.BugsFixed[bugKey].TicketComments));
+							foreach (var impKey in changeLogs.Improvements.Keys)
+								buildapp.AppendLastBuildFeedback("IMPROVEMENT done: " + changeLogs.Improvements[impKey].Summary
+									+ " (" + changeLogs.Improvements[impKey].Description + ") - " + string.Join(". ", changeLogs.Improvements[impKey].TicketComments));
+							foreach (var newKey in changeLogs.NewFeatures.Keys)
+								buildapp.AppendLastBuildFeedback("NEW feature: " + changeLogs.NewFeatures[newKey].Summary
+									+ " (" + changeLogs.NewFeatures[newKey].Description + ") - " + string.Join(". ", changeLogs.NewFeatures[newKey].TicketComments));
+
+							if ((changeLogs.BugsFixed == null || changeLogs.BugsFixed.Count == 0)
+								&& (changeLogs.Improvements == null || changeLogs.Improvements.Count == 0)
+								&& (changeLogs.NewFeatures == null || changeLogs.NewFeatures.Count == 0))
+								buildapp.AppendLastBuildFeedback("No tickets were [CLOSED] " + (onlyAfterPreviousPublish ? "after the last publish" : "yet") + ".");
+						});
+				}
+				finally
+				{
+					actionOnAppsAlreadyBusy = false;
+				}
+			},
+			false);
 		}
 
 		private void contextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
@@ -693,6 +785,47 @@ namespace BuildTestSystem
 			}
 		}
 
+		private void contextmenuitemClearMessages_Click(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var ba in buildapps)
+				ba.ClearLastBuildFeedback();
+		}
+
+		private void test_contextmenuitemCreateHtmlPage_Click(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			foreach (var ba in buildapps)
+			{
+				DateTime? changelogsSinceDate = null;
+				if (!PublishInterop.ObtainPreviouslyPublishedDate(
+					ba.ApplicationName,
+					(mess, messagetype) => FeedbackMessageAction(ba, mess, messagetype),
+					out changelogsSinceDate))
+					return;//continue;
+
+				/*List<string> BugsFixed = null;
+				List<string> Improvements = null;
+				List<string> NewFeatures = null;*/
+				var changeLogs =PublishInterop.GetChangeLogs(
+					changelogsSinceDate,
+					ba.ApplicationName,
+					(mes, msgtype) => { FeedbackMessageAction(null, mes, msgtype); });
+				if (changeLogs == null)
+					return;
+
+				List<string> tmplistofscreenshots;//Will not use it
+				var htmlPagePath = PublishInterop.CreateHtmlPageReturnFilename(ba.ApplicationName, "0.0.0.Test", "test_setup.exe", changeLogs, out tmplistofscreenshots, null);
+				if (htmlPagePath == null)
+					return;
+				string newHtmlPagePath = Path.Combine(Path.GetDirectoryName(htmlPagePath), "testonly_" + Path.GetFileName(htmlPagePath));
+				if (File.Exists(newHtmlPagePath))
+					File.Delete(newHtmlPagePath);
+				File.Move(htmlPagePath, newHtmlPagePath);
+				Process.Start(newHtmlPagePath);
+			}
+		}
+
 		private void textblockAbout_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
 		{
 			AboutWindow2.ShowAboutWindow(new System.Collections.ObjectModel.ObservableCollection<DisplayItem>()
@@ -716,6 +849,16 @@ namespace BuildTestSystem
 		private void radioButtonShowAll_Click(object sender, RoutedEventArgs e)
 		{
 			ShowApplicationsBasedOnPredicate(ba => true);
+		}
+
+		private void radioButtonShowAnalysed_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsPartOfAnalysedList());
+		}
+
+		private void radioButtonShowUnanalysed_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => !ba.IsPartOfAnalysedList());
 		}
 
 		private void radioButtonShowInstalled_Click(object sender, RoutedEventArgs e)
@@ -758,6 +901,18 @@ namespace BuildTestSystem
 			else if (radioButtonShowUnselected.IsChecked == true)
 				ShowApplicationsBasedOnPredicate(b => b.IsSelected != true);
 		}
+
+		private void buttonSelectAll_Click(object sender, RoutedEventArgs e)
+		{
+			foreach (var ba in applicationList)
+				ba.IsSelected = true;
+		}
+
+		private void buttonUnselectAll_Click(object sender, RoutedEventArgs e)
+		{
+			foreach (var ba in applicationList)
+				ba.IsSelected = false;
+		}
 	}
 
 	public class BuildApplication : VSBuildProject, INotifyPropertyChanged
@@ -779,15 +934,47 @@ namespace BuildTestSystem
 		private int? _currentprogressPprcentage;
 		public int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged("CurrentProgressPercentage"); } }
 
+		protected string ApplicationIconPath { get; private set; }
+
+		private ImageSource _applicationicon;
+		public ImageSource ApplicationIcon
+		{
+			get { if (_applicationicon == null) if (ApplicationIconPath != null) _applicationicon = IconsInterop.IconExtractor.Extract(ApplicationIconPath, IconsInterop.IconExtractor.IconSize.Large).IconToImageSource(); return _applicationicon; }
+		}
+
+		public bool IsFrancoisPc { get { return Directory.Exists(@"C:\Francois\Dev\VSprojects"); } }
+
 		public BuildApplication(string ApplicationName, Action<string> actionOnError = null)
 			: base(ApplicationName, null, actionOnError)
 		{
+			string tmper;
+
 			this.CurrentProgressPercentage = 0;
 			this.IsSelected = false;
+			this.ApplicationIconPath = OwnAppsInterop.GetAppIconPath(ApplicationName, out tmper);
+			if (this.ApplicationIconPath == null) actionOnError(tmper);
+		}
+
+		public bool IsPartOfAnalysedList()
+		{
+			return SettingsSimple.AnalyseProjectsSettings.Instance.ListOfApplicationsToAnalyse
+				.Count(a => a.Equals(this.ApplicationName, StringComparison.InvariantCultureIgnoreCase)) > 0;
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
 		public void OnPropertyChanged(string propertyName) { PropertyChanged(this, new PropertyChangedEventArgs(propertyName)); }
+
+		private static bool isbusyBuilding = false;
+		public static bool IsBusyBuilding(bool showErrorIfBusy = true)
+		{
+			if (isbusyBuilding)
+				UserMessages.ShowWarningMessage("Cannot build, another build already in progress");
+			return isbusyBuilding;
+		}
+		public static void SetIsBusyBuildingTrue(bool newValue)
+		{
+			isbusyBuilding = newValue;
+		}
 
 		public void OpenInCSharpExpress()
 		{
@@ -803,6 +990,11 @@ namespace BuildTestSystem
 				if (proc != null)
 				{
 					proc.WaitForExit();
+
+					if (IsBusyBuilding(true))
+						return;
+					isbusyBuilding = true;
+
 					List<string> csprojectPaths;
 					this.PerformBuild(null, out csprojectPaths);
 				}
@@ -816,6 +1008,12 @@ namespace BuildTestSystem
 			if (!string.IsNullOrWhiteSpace(this.LastBuildFeedback))
 				this.LastBuildFeedback += Environment.NewLine;
 			this.LastBuildFeedback += textToAppend;
+		}
+
+		public void ClearLastBuildFeedback()
+		{
+			this.LastBuildFeedback = null;
+			this.LastBuildResult = null;
 		}
 	}
 
@@ -937,4 +1135,21 @@ namespace BuildTestSystem
 			throw new NotImplementedException();
 		}
 	}
+
+	/*public class BuildAppListHasSelectedItemsConverter : IValueConverter
+	{
+		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			object o = value;
+			if (o != null)
+			{
+			}
+			return null;
+		}
+
+		public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+		{
+			throw new NotImplementedException();
+		}
+	}*/
 }

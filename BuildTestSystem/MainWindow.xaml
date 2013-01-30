@@ -2,20 +2,23 @@
 		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:local='clr-namespace:BuildTestSystem'
-		xmlns:sharedclasses='clr-namespace:SharedClasses'
+		xmlns:sharedclasses='clr-namespace:SharedClasses;assembly=_OwnAppsSharedDll'
+		Name='mainWindow'
 		Icon='app.ico'
 		Title='Build test system'
 		Height="250"
 		Width='790'
 		WindowStartupLocation='CenterScreen'
+		UseLayoutRounding='True'
 		Loaded='Window_Loaded'>
 	<Window.Resources>
 		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />
 		<local:BoolToOpacityConverter x:Key='boolToOpacityConverter' />
-		<sharedclasses:BooleanToVisibilityConverter x:Key='booleanToVisibilityConverter' />
 		<local:NullableIntToIntConverter x:Key='nullableIntToIntConverter' />
 		<local:NullableIntToBooleanConverter x:Key='nullableIntToBooleanConverter' />
 		<local:NullableIntToVisibilityConverter x:Key='nullableIntToVisibilityConverter' />
+		<!--<local:BuildAppListHasSelectedItemsConverter x:Key='buildAppListHasSelectedItemsConverter' />-->
+		<sharedclasses:BooleanToVisibilityConverter x:Key='booleanToVisibilityConverter' />
 		<LinearGradientBrush x:Key='ItemHoverBackgroundBrush'
 							 StartPoint='0,0'
 							 EndPoint='0,1'>
@@ -92,37 +95,48 @@
 	<Window.TaskbarItemInfo>
 		<TaskbarItemInfo />
 	</Window.TaskbarItemInfo>
-	<DockPanel LastChildFill='True'>
-		<StackPanel Margin='20 10'
-					DockPanel.Dock='Bottom'>
-			<ProgressBar Name='progressBarIndeterminate'
-						 Height='15'
-						 IsIndeterminate='True'
-						 Visibility='Hidden' />
-			<DockPanel LastChildFill='True'>
-				<TextBlock Text='About'
-						   DockPanel.Dock='Right'
-						   Foreground='Gray'
-						   Cursor='Hand'
-						   MouseLeftButtonUp='textblockAbout_MouseLeftButtonUp' />
-				<TextBlock Name='statusLabel' />
-			</DockPanel>
-		</StackPanel>
-		<Grid Name='mainContent'>
-			<StackPanel Orientation='Horizontal'
-						Margin='10'>
+	<DockPanel LastChildFill='True'
+			   Background='Transparent'>
+		<Border Margin='15 10'
+				DockPanel.Dock='Bottom'
+				BorderThickness='1'
+				BorderBrush='#555'
+				CornerRadius='10'
+				Padding='10'>
+			<StackPanel>
+				<ProgressBar Name='progressBarIndeterminate'
+							 Height='15'
+							 IsIndeterminate='True'
+							 Visibility='Hidden' />
+				<DockPanel LastChildFill='True'>
+					<TextBlock Text='About'
+							   DockPanel.Dock='Right'
+							   Foreground='Gray'
+							   Cursor='Hand'
+							   MouseLeftButtonUp='textblockAbout_MouseLeftButtonUp' />
+					<TextBlock Name='statusLabel' />
+				</DockPanel>
+			</StackPanel>
+		</Border>
+		<Grid Name='mainContent'
+			  Margin='15 15 15 0'>
+			<Grid.RowDefinitions>
+				<RowDefinition Height='30' />
+				<RowDefinition Height='30' />
+				<RowDefinition />
+			</Grid.RowDefinitions>
+			<StackPanel Grid.Row='0'
+						Orientation='Horizontal'>
 				<Button Name='buttonObtainApplicationList'
 						Content='Obtain application list'
 						Background='Transparent'
 						BorderBrush='#aaa'
 						VerticalAlignment='Top'
-						Height='23'
 						Click='buttonObtainApplicationList_Click' />
 				<Button Name='buttonBuildAll'
 						Content='Build all'
 						Background='Transparent'
 						BorderBrush='#aaa'
-						Height='23'
 						Margin='10 0 0 0'
 						VerticalAlignment='Top'
 						Width='75'
@@ -131,7 +145,6 @@
 						Content='Check all for updates'
 						Background='Transparent'
 						BorderBrush='#aaa'
-						Height='23'
 						Margin='10 0 0 0'
 						VerticalAlignment='Top'
 						Width='130'
@@ -140,19 +153,47 @@
 						Content='Check versioning status'
 						Background='Transparent'
 						BorderBrush='#aaa'
-						Height='23'
 						Margin='10 0 0 0'
 						VerticalAlignment='Top'
 						Width='130'
 						Click='buttonCheckVersioningStatusAll_Click' />
 			</StackPanel>
-			<StackPanel Orientation='Horizontal'
-						Margin='10 40 10 0'
+			<StackPanel Grid.Row='0'
+						Orientation='Horizontal'
+						VerticalAlignment='Top'
+						HorizontalAlignment='Right'>
+				<TextBlock Name='textblockSelectedCount'
+						   Foreground='#aaa'
+						   VerticalAlignment='Center' />
+				<Button Name='buttonSelectAll'
+						Content='Select all'
+						Background='Transparent'
+						Foreground='Green'
+						Margin='5 0 0 0'
+						Click='buttonSelectAll_Click' />
+				<Button Name='buttonUnselectAll'
+						Content='Unselect all'
+						Background='Transparent'
+						Foreground='CadetBlue'
+						Margin='5 0 0 0'
+						Visibility='Hidden'
+						Click='buttonUnselectAll_Click' />
+			</StackPanel>
+			<StackPanel Grid.Row='1'
+						Orientation='Horizontal'
 						VerticalAlignment='Top'>
 				<RadioButton Content='All'
 							 Name='radionButtonShowAll'
 							 IsChecked='True'
 							 Click='radioButtonShowAll_Click' />
+				<RadioButton Content='Analysed'
+							 Name='radioButtonShowAnalysed'
+							 Margin='30 0 0 0'
+							 Click='radioButtonShowAnalysed_Click' />
+				<RadioButton Content='Unanalysed'
+							 Name='radioButtonShowUnanalysed'
+							 Margin='10 0 0 0'
+							 Click='radioButtonShowUnanalysed_Click' />
 				<RadioButton Content='Selected'
 							 Name='radioButtonShowSelected'
 							 Margin='30 0 0 0'
@@ -174,10 +215,10 @@
 							 Margin='10 0 0 0'
 							 Click='radioButtonShowUnversioncontrolled_Click' />
 			</StackPanel>
-			<TreeView Name='tmpMainTreeview'
-					  Margin='10 55 10 0'
+			<TreeView Grid.Row='2'
+					  Name='tmpMainTreeview'
 					  BorderThickness='0'
-					  FontSize='20'
+					  FontSize='14'
 					  ScrollViewer.CanContentScroll='False'>
 				<TreeView.ItemTemplate>
 					<DataTemplate>
@@ -207,6 +248,11 @@
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->
 										<MenuItem Header='Install latest version (silently)'
 												  Click='contextmenuInstallLatestVersion' />
+										<Separator />
+										<MenuItem Header='Get change logs (only after previous publish)'
+												  Click='contextmenuitemGetChangeLogs_OnlyAfterPreviousPublish_Click' />
+										<MenuItem Header='Get change logs (all)'
+												  Click='contextmenuitemGetChangeLogs_All_Click' />
 									</MenuItem>
 									<MenuItem Header='Subversion'>
 										<MenuItem Header='Status'
@@ -218,6 +264,15 @@
 										<MenuItem Header='Commit'
 												  Click='contextmenuSubversionCommitChanges' />
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
+									</MenuItem>
+									<MenuItem Header='Messages'>
+										<MenuItem Header='_Clear messages'
+												  Click='contextmenuitemClearMessages_Click' />
+									</MenuItem>
+									<MenuItem Header='Testing'
+											  Visibility='{Binding IsFrancoisPc, Converter={StaticResource booleanToVisibilityConverter}}'>
+										<MenuItem Header='Create HTML page'
+												  Click='test_contextmenuitemCreateHtmlPage_Click' />
 									</MenuItem>
 								</ContextMenu>
 							</Border.ContextMenu>
@@ -232,22 +287,27 @@
 												 Visibility='{Binding CurrentProgressPercentage,Mode=OneWay,Converter={StaticResource nullableIntToVisibilityConverter},ConverterParameter=HideInsteadOfCollapse}'
 												 Margin='10 0'
 												 Padding='0' />
-									<Label DockPanel.Dock='Top'
-										   Content='{Binding ApplicationName}' />
+									<StackPanel DockPanel.Dock='Top'
+												Orientation='Horizontal'>
+										<Image Source='{Binding ApplicationIcon}'
+											   Width='16' />
+										<Label Content='{Binding ApplicationName}' />
+									</StackPanel>
 									<StackPanel Orientation='Horizontal'
 												Margin='15 0 0 0'>
-										<Image Width='32'
+										<Image Width='24'
 											   Source='/BuildTestSystem;component/Resources/greenshield.ico'
 											   ToolTip='Application installed status'
 											   Opacity='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource boolToOpacityConverter}}' />
-										<Image Width='32'
+										<Image Width='24'
 											   Source='/BuildTestSystem;component/Resources/greentick.ico'
 											   ToolTip='Version controlled status'
 											   Opacity='{Binding IsVersionControlled,Mode=OneWay,Converter={StaticResource boolToOpacityConverter}}' />
 										<CheckBox Name='checkboxIsSelected'
 												  Content='Selected'
 												  IsChecked='{Binding IsSelected, Mode=TwoWay}'
-												  FontSize='14'
+												  Margin='5 0 0 0'
+												  FontSize='10'
 												  FontWeight='Bold'
 												  Foreground='DarkViolet'
 												  VerticalAlignment='Center'
@@ -281,9 +341,12 @@
 							</DataTrigger>
 							<DataTrigger Binding="{Binding IsSelected}"
 										 Value="True">
-								<Setter Property="Background"
+								<!--<Setter Property="Background"
 										TargetName="borderMainItemBorder"
-										Value='{StaticResource ItemHoverBackgroundBrush}' />
+										Value='{StaticResource ItemHoverBackgroundBrush}' />-->
+								<Setter Property='BorderThickness'
+										TargetName='borderMainItemBorder'
+										Value='2' />
 								<Setter Property='BorderBrush'
 										TargetName='borderMainItemBorder'
 										Value='#777' />
