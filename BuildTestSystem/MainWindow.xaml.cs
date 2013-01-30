@@ -995,8 +995,15 @@ namespace BuildTestSystem
 						return;
 					isbusyBuilding = true;
 
-					List<string> csprojectPaths;
-					this.PerformBuild(null, out csprojectPaths);
+					try
+					{
+						List<string> csprojectPaths;
+						this.PerformBuild(null, out csprojectPaths);
+					}
+					finally
+					{
+						isbusyBuilding = false;
+					}
 				}
 			},
 			csharpPath,
