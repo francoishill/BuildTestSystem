@@ -792,7 +792,7 @@ namespace BuildTestSystem
 				ba.ClearLastBuildFeedback();
 		}
 
-		private void test_contextmenuitemCreateHtmlPage_Click(object sender, RoutedEventArgs e)
+		/*private void test_contextmenuitemCreateHtmlPage_Click(object sender, RoutedEventArgs e)
 		{
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var ba in buildapps)
@@ -803,10 +803,7 @@ namespace BuildTestSystem
 					(mess, messagetype) => FeedbackMessageAction(ba, mess, messagetype),
 					out changelogsSinceDate))
 					return;//continue;
-
-				/*List<string> BugsFixed = null;
-				List<string> Improvements = null;
-				List<string> NewFeatures = null;*/
+		 
 				var changeLogs =PublishInterop.GetChangeLogs(
 					changelogsSinceDate,
 					ba.ApplicationName,
@@ -824,7 +821,7 @@ namespace BuildTestSystem
 				File.Move(htmlPagePath, newHtmlPagePath);
 				Process.Start(newHtmlPagePath);
 			}
-		}
+		}*/
 
 		private void textblockAbout_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
 		{

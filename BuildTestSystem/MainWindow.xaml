@@ -269,11 +269,11 @@
 										<MenuItem Header='_Clear messages'
 												  Click='contextmenuitemClearMessages_Click' />
 									</MenuItem>
-									<MenuItem Header='Testing'
+									<!--<MenuItem Header='Testing'
 											  Visibility='{Binding IsFrancoisPc, Converter={StaticResource booleanToVisibilityConverter}}'>
 										<MenuItem Header='Create HTML page'
 												  Click='test_contextmenuitemCreateHtmlPage_Click' />
-									</MenuItem>
+									</MenuItem>-->
 								</ContextMenu>
 							</Border.ContextMenu>
 							<DockPanel LastChildFill='True'
