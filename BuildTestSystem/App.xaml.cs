@@ -50,7 +50,7 @@ namespace BuildTestSystem
 					}
 					else
 					{
-						buildapp = new BuildApplication(args[1], err => WriteError(err));
+						buildapp = new BuildApplication(args[1]);
 						if (buildapp != null && buildapp.SolutionFullpath != null)//Could not find the directory
 						{
 							if (task != CommandlineTasks.DownloadTempSetup)
@@ -125,6 +125,27 @@ namespace BuildTestSystem
 
 			try
 			{
+				BuildApplication.ActionOnFeedbackMessageReceived =
+				(app, message, msgtype) =>
+				{
+					if (message != null)
+					{
+						if (msgtype == FeedbackMessageTypes.Error)
+							WriteError(message);
+						else if (msgtype == FeedbackMessageTypes.Warning)
+							WriteOutput("WARN: " + message);
+						else
+							WriteOutput(message);
+					}
+				};
+
+				BuildApplication.ActionOnProgressPercentageChanged =
+					(app, newprogress) =>
+					{
+						if (newprogress.HasValue)
+							WriteOutput("Progress: " + newprogress + "%");
+					};
+
 				string arg1task = args[0];
 				
 				string arg2appname = args.Count > 1 ? args[1] : null;//If we do not have applicationName
@@ -164,14 +185,7 @@ namespace BuildTestSystem
 						break;
 					case CommandlineTasks.Build:
 						List<string> tmpl;
-						bool buildSuccess = buildapp.PerformBuild((ms, mstype) =>
-						{
-							if (mstype == FeedbackMessageTypes.Error)
-								WriteError(ms);
-							else
-								WriteOutput(ms);
-						},
-						out tmpl);
+						bool buildSuccess = buildapp.PerformBuild(out tmpl);
 						if (buildSuccess)
 							WriteOutput("Successfully built: " + buildapp.ApplicationName);
 						break;
@@ -193,12 +207,6 @@ namespace BuildTestSystem
 						Guid newGuid = Guid.NewGuid();
 						string setupFilename = newGuid.ToString() + ".exe";
 						bool publishSuccess = buildapp.PerformPublish(
-							(ms, msgtype) =>
-							{
-								if (msgtype != FeedbackMessageTypes.Error) WriteOutput(ms);
-								else WriteError(ms);
-							},
-							delegate { },//Doing nothing with progress report (its only if DotNetChecker is downloaded)
 							false,
 							false,
 							false,

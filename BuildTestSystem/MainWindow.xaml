@@ -6,8 +6,10 @@
 		Name='mainWindow'
 		Icon='app.ico'
 		Title='Build test system'
+		FontFamily='Comic Sans MS'
+		FontSize='11'
 		Height="250"
-		Width='790'
+		Width='1300'
 		WindowStartupLocation='CenterScreen'
 		UseLayoutRounding='True'
 		Loaded='Window_Loaded'>
@@ -47,7 +49,8 @@
 				</DrawingGroup>
 			</DrawingImage.Drawing>
 		</DrawingImage>
-		<DrawingImage x:Key="overlayImageBuildFailed">
+		<!--<DrawingImage x:Key="overlayImageBuildFailed">-->
+		<DrawingImage x:Key="overlayImageError">
 			<DrawingImage.Drawing>
 				<DrawingGroup>
 					<DrawingGroup.Children>
@@ -62,7 +65,23 @@
 				</DrawingGroup>
 			</DrawingImage.Drawing>
 		</DrawingImage>
-		<DrawingImage x:Key="overlayImageNotUpToDate">
+		<!--<DrawingImage x:Key="overlayImageNotUpToDate">-->
+		<DrawingImage x:Key="overlayImageWarning">
+			<DrawingImage.Drawing>
+				<DrawingGroup>
+					<DrawingGroup.Children>
+						<GeometryDrawing Brush="Orange">
+							<GeometryDrawing.Geometry>
+								<RectangleGeometry Rect="0 0 16 16"
+												   RadiusX="3"
+												   RadiusY="3" />
+							</GeometryDrawing.Geometry>
+						</GeometryDrawing>
+					</DrawingGroup.Children>
+				</DrawingGroup>
+			</DrawingImage.Drawing>
+		</DrawingImage>
+		<!--<DrawingImage x:Key="overlayImageVersionControlChanges">
 			<DrawingImage.Drawing>
 				<DrawingGroup>
 					<DrawingGroup.Children>
@@ -76,22 +95,7 @@
 					</DrawingGroup.Children>
 				</DrawingGroup>
 			</DrawingImage.Drawing>
-		</DrawingImage>
-		<DrawingImage x:Key="overlayImageVersionControlChanges">
-			<DrawingImage.Drawing>
-				<DrawingGroup>
-					<DrawingGroup.Children>
-						<GeometryDrawing Brush="Red">
-							<GeometryDrawing.Geometry>
-								<RectangleGeometry Rect="0 0 16 16"
-												   RadiusX="3"
-												   RadiusY="3" />
-							</GeometryDrawing.Geometry>
-						</GeometryDrawing>
-					</DrawingGroup.Children>
-				</DrawingGroup>
-			</DrawingImage.Drawing>
-		</DrawingImage>
+		</DrawingImage>-->
 	</Window.Resources>
 	<Window.TaskbarItemInfo>
 		<TaskbarItemInfo />
@@ -113,8 +117,19 @@
 					<TextBlock Text='About'
 							   DockPanel.Dock='Right'
 							   Foreground='Gray'
+							   Margin='5 0 0 0'
 							   Cursor='Hand'
 							   MouseLeftButtonUp='TextblockAboutMouseLeftButtonUp' />
+					<Button DockPanel.Dock='Right'
+							Background='Transparent'
+							Foreground='CadetBlue'
+							Padding='0'
+							Opacity='0.7'
+							FontSize='10'
+							FontWeight='Bold'
+							Content='_Clear'
+							Click='Button_Click' />
+					<!--Visibility='{Binding Path=Text.Length, ElementName=statusLabel}'/>-->
 					<TextBlock Name='statusLabel' />
 				</DockPanel>
 			</StackPanel>
@@ -172,6 +187,12 @@
 						Foreground='Green'
 						Margin='5 0 0 0'
 						Click='ButtonSelectAllClick' />
+				<Button Name='buttonSelectVisible'
+						Content='Select visible'
+						Background='Transparent'
+						Foreground='Purple'
+						Margin='5 0 0 0'
+						Click='ButtonSelectVisibleClick' />
 				<Button Name='buttonUnselectAll'
 						Content='Unselect all'
 						Background='Transparent'
@@ -180,16 +201,40 @@
 						Visibility='Hidden'
 						Click='ButtonUnselectAllClick' />
 			</StackPanel>
-			<StackPanel Grid.Row='1'
+			<WrapPanel Grid.Row='1'
 						Orientation='Horizontal'
 						VerticalAlignment='Top'>
 				<RadioButton Content='All'
 							 Name='radionButtonShowAll'
 							 IsChecked='True'
 							 Click='RadioButtonShowAllClick' />
+				<RadioButton Content='Normal'
+							 Name='radioButtonShowNormal'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowNormalClick' />
+				<RadioButton Content='Queued'
+							 Name='radioButtonShowQueued'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowQueuedClick' />
+				<RadioButton Content='Busy'
+							 Name='radioButtonShowBusy'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowBusyClick' />
+				<RadioButton Content='Success'
+							 Name='radioButtonShowSuccess'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowSuccessClick' />
+				<RadioButton Content='Warnings'
+							 Name='radioButtonShowWarnings'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowWarningsClick' />
+				<RadioButton Content='Errors'
+							 Name='radioButtonShowErrors'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowErrorsClick'/>
 				<RadioButton Content='Analysed'
 							 Name='radioButtonShowAnalysed'
-							 Margin='30 0 0 0'
+							 Margin='100 0 0 0'
 							 Click='RadioButtonShowAnalysedClick' />
 				<RadioButton Content='Unanalysed'
 							 Name='radioButtonShowUnanalysed'
@@ -224,7 +269,7 @@
 				<RadioButton Content='Unversion controlled'
 							 Margin='10 0 0 0'
 							 Click='RadioButtonShowUnversioncontrolledClick' />
-			</StackPanel>
+			</WrapPanel>
 			<TreeView Grid.Row='2'
 					  Name='tmpMainTreeview'
 					  BorderThickness='0'
