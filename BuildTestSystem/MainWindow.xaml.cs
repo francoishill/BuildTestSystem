@@ -43,10 +43,26 @@ namespace BuildTestSystem
 			BuildApplication.ActionOnProgressPercentageChanged = OnProgressPercentageChanged;
 		}
 
+		private void Window_Loaded(object sender, RoutedEventArgs e)
+		{
+			this.WindowState = System.Windows.WindowState.Maximized;
+			ShowIndeterminateProgress("Obtaining list");
+			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
+			{
+				//Calls it to prevent delaying when obtaining list in future
+				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
+				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
+				HideIndeterminateProgress(null, true);
+				ObtainApplicationList();
+			},
+			false);
+		}
+
+
 		private void OnFeedbackMessageReceived(VsBuildProject buildapp, string message, FeedbackMessageTypes messagetype)
 		{
 			if (buildapp == null)
-				this.Dispatcher.Invoke((Action)delegate
+				this.Dispatcher.BeginInvoke((Action)delegate
 				{
 					if (message != null)
 						statusLabel.Text = message;
@@ -72,7 +88,7 @@ namespace BuildTestSystem
 		private void OnProgressPercentageChanged(VsBuildProject buildapp, int? newprogress)
 		{
 			if (buildapp == null)
-				this.Dispatcher.Invoke((Action)delegate
+				this.Dispatcher.BeginInvoke((Action)delegate
 				{
 					if (!newprogress.HasValue)
 						ShowIndeterminateProgress("");
@@ -80,24 +96,36 @@ namespace BuildTestSystem
 				});
 		}
 
-		private void Window_Loaded(object sender, RoutedEventArgs e)
+		private void DoOperationWithApps(Action<BuildApplication> actionOnEachApp, string OperationDisplayName, string InitialStatusMessage,
+			bool AllowConcurrent, bool ClearAppStatusTextFirst, Predicate<VsBuildProject> ShouldIncludeApp)
 		{
-			this.WindowState = System.Windows.WindowState.Maximized;
-			ShowIndeterminateProgress("Obtaining list");
-			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
-			{
-				//Calls it to prevent delaying when obtaining list in future
-				var apps = SettingsSimple.BuildTestSystemSettings.Instance.ListOfApplicationsToBuild;
-				SettingsSimple.BuildTestSystemSettings.EnsureDefaultItemsInList();
-				HideIndeterminateProgress(null, true);
-				ObtainApplicationList();
-			},
-			false);
+			var settings = new VsBuildProject.OverallOperationSettings(
+				   OperationDisplayName,
+				   InitialStatusMessage,
+				   AllowConcurrent,
+				   (progperc, progstate) =>
+				   {
+					   SetWindowProgressValue((double)progperc / 100d);
+					   if (progstate.HasValue)
+						   SetWindowProgressState(GetTaskbarItemProgressStateFromProgressState(progstate.Value));
+					   if (progperc == 100)
+						   this.HideIndeterminateProgress(null, true);
+				   },
+				   (mes, msgtype) =>
+					   this.Dispatcher.BeginInvoke((Action)delegate { this.statusLabel.Text = mes; }),//ShowIndeterminateProgress(mes, null, true),
+				   ClearAppStatusTextFirst,
+				   ShouldIncludeApp,
+				   VsBuildProject.OverallOperationSettings.DurationMeasurementType.Both);
+
+			BuildApplication.DoOperation(
+				listOfApplications,
+				(app) => actionOnEachApp((BuildApplication)app),
+				settings);
 		}
 
 		public static void SetWindowProgressValue(double progressFractionOfOne)
 		{
-			_windowInstance.Dispatcher.Invoke((Action<double>)(
+			_windowInstance.Dispatcher.BeginInvoke((Action<double>)(
 				(progfact) =>
 				{
 					_windowTaskBarItem.ProgressValue = progfact;
@@ -140,7 +168,7 @@ namespace BuildTestSystem
 				SetWindowProgressValue(1);
 			_lastProgressState = progressState;
 
-			_windowInstance.Dispatcher.Invoke((Action<TaskbarItemProgressState>)(//, OverlayImage?>)(
+			_windowInstance.Dispatcher.BeginInvoke((Action<TaskbarItemProgressState>)(//, OverlayImage?>)(
 				(state) =>//, image) =>
 				{
 					_windowTaskBarItem.ProgressState = state;
@@ -234,9 +262,10 @@ namespace BuildTestSystem
 						else if (pn.PropertyName.Equals("CurrentStatus", StringComparison.InvariantCultureIgnoreCase))
 						{
 							if (_lastUsedPredicateForShowingApps != null)
-								Dispatcher.Invoke((Action)delegate
+								Dispatcher.BeginInvoke((Action)delegate
 								{
 									ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
+									this.UpdateLayout();
 								});
 						}
 					};
@@ -246,7 +275,7 @@ namespace BuildTestSystem
 			};
 
 			if (Thread.CurrentThread != this.Dispatcher.Thread)
-				this.Dispatcher.Invoke(act);
+				this.Dispatcher.BeginInvoke(act);
 			else
 				act();
 		}
@@ -358,7 +387,15 @@ namespace BuildTestSystem
 
 		private void buttonCheckForUpdatesAll_Click(object sender, RoutedEventArgs e)
 		{
-			if (BuildApplication.IsBusyBuilding(true))
+			DoOperationWithApps(
+				(app) => app.CheckForUpdates(false),
+				"Check for updates",
+				"Busy checking for updates, please be patient...",
+				true,
+				true,
+				(app) => ((BuildApplication)app).IsInstalled == true);
+
+			/*if (BuildApplication.IsBusyBuilding(true))
 				return;
 			BuildApplication.SetIsBusyBuildingTrue(true);
 
@@ -366,7 +403,7 @@ namespace BuildTestSystem
 			ThreadingInterop.PerformVoidFunctionSeperateThread(() =>
 			{
 				var items = tmpMainTreeview.Items;
-				List<string> appswithErrors = new List<string>();
+				//List<string> appswithErrors = new List<string>();
 				for (int i = 0; i < items.Count; i++)
 				{
 					var ba = (items[i] as BuildApplication);
@@ -389,8 +426,8 @@ namespace BuildTestSystem
 					{
 						ShowIndeterminateProgress("Check for updates for : " + buildapp.ApplicationName, buildapp, true);
 						buildapp.CheckForUpdates(false);
-						if (!string.IsNullOrWhiteSpace(buildapp.CurrentStatusText))
-							appswithErrors.Add(buildapp.ApplicationName);
+						//if (!string.IsNullOrWhiteSpace(buildapp.CurrentStatusText))
+						//    appswithErrors.Add(buildapp.ApplicationName);
 						//HideIndeterminateProgress(buildapp, true);
 						MainWindow.SetWindowProgressValue((double)++completedItemCount / (double)items.Count);
 					});
@@ -403,20 +440,20 @@ namespace BuildTestSystem
 				//    AppCheckForUpdates(buildapp, false);
 				//    TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
 				//}//);
-				/*if (appswithErrors.Count > 0)
-				{
-					MainWindow.SetWindowProgressValue(1);
-					if (_lastProgressState != TaskbarItemProgressState.Error)
-						MainWindow.SetWindowProgressState(TaskbarItemProgressState.Paused);//, OverlayImage.Warning);
-					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
-					//    string.Join(Environment.NewLine, appswithErrors));
-				}
-				else
-					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);*/
+				//if (appswithErrors.Count > 0)
+				//{
+				//    MainWindow.SetWindowProgressValue(1);
+				//    if (_lastProgressState != TaskbarItemProgressState.Error)
+				//        MainWindow.SetWindowProgressState(TaskbarItemProgressState.Paused);//, OverlayImage.Warning);
+				//    //UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
+				//    //    string.Join(Environment.NewLine, appswithErrors));
+				//}
+				//else
+				//    MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
 				BuildApplication.SetIsBusyBuildingTrue(false);
 			},
-			false);
+			false);*/
 		}
 
 		private void buttonCheckVersioningStatusAll_Click(object sender, RoutedEventArgs e)
@@ -434,7 +471,6 @@ namespace BuildTestSystem
 				for (int i = 0; i < items.Count; i++)
 					(items[i] as BuildApplication)
 						.ResetStatus(true);
-
 
 				int completedItemCount = 0;
 
@@ -477,6 +513,36 @@ namespace BuildTestSystem
 			false);
 		}
 
+		private TaskbarItemProgressState GetTaskbarItemProgressStateFromProgressState(VsBuildProject.ProgressStates progressState)
+		{
+			switch (progressState)
+			{
+				case VsBuildProject.ProgressStates.None:
+					return TaskbarItemProgressState.None;
+				case VsBuildProject.ProgressStates.Indeterminate:
+					return TaskbarItemProgressState.Indeterminate;
+				case VsBuildProject.ProgressStates.Normal:
+					return TaskbarItemProgressState.Normal;
+				case VsBuildProject.ProgressStates.Error:
+					return TaskbarItemProgressState.Error;
+				case VsBuildProject.ProgressStates.Paused:
+					return TaskbarItemProgressState.Paused;
+				default:
+					return TaskbarItemProgressState.None;
+			}
+		}
+
+		private void buttonTestClick(object sender, RoutedEventArgs e)
+		{
+			DoOperationWithApps(
+				(app) => { Thread.Sleep(500); },
+				"Testing operation",
+				"This is the initial message",
+				true,
+				true,
+				(appcheckinclude) => { return appcheckinclude.ApplicationName.StartsWith("M", StringComparison.InvariantCultureIgnoreCase); });
+		}
+
 		private void ShowIndeterminateProgress(string message, BuildApplication buildappToSetProgress = null, bool fromSeparateThread = false)
 		{
 			SetWindowProgressState(TaskbarItemProgressState.Indeterminate);
@@ -492,7 +558,7 @@ namespace BuildTestSystem
 			if (!fromSeparateThread)
 				act();
 			else
-				this.Dispatcher.Invoke(act);
+				this.Dispatcher.BeginInvoke(act);
 		}
 
 		private void HideIndeterminateProgress(BuildApplication buildappToSetProgress = null, bool fromSeparateThread = false)
@@ -514,7 +580,7 @@ namespace BuildTestSystem
 			if (!fromSeparateThread)
 				act();
 			else
-				this.Dispatcher.Invoke(act);
+				this.Dispatcher.BeginInvoke(act);
 		}
 
 		private BuildApplication GetBuildApplicationFromFrameworkElement(object potentialFrameworkelement)
@@ -679,7 +745,7 @@ namespace BuildTestSystem
 			}
 
 			if (buildapp == null)
-				this.Dispatcher.Invoke((Action)delegate { statusLabel.Text = mes; });
+				this.Dispatcher.BeginInvoke((Action)delegate { statusLabel.Text = mes; });
 			else
 				buildapp.AppendCurrentStatusText(mes);
 		}*/
@@ -877,6 +943,11 @@ namespace BuildTestSystem
 		private void RadioButtonShowNormalClick(object sender, RoutedEventArgs e)
 		{
 			ShowApplicationsBasedOnPredicate(ba => ba.CurrentStatus == VsBuildProject.StatusTypes.Normal);
+		}
+
+		private void RadioButtonShowNonnormalClick(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.CurrentStatus != VsBuildProject.StatusTypes.Normal);
 		}
 
 		private void RadioButtonShowQueuedClick(object sender, RoutedEventArgs e)
@@ -1161,44 +1232,44 @@ namespace BuildTestSystem
 
 		public void CheckForUpdates(bool separateThread)
 		{
-			Action<BuildApplication> checkForUpdatesAction =
+			/*Action<BuildApplication> checkForUpdatesAction =
                 (buildApplication) =>
 				{
 					buildApplication.ResetStatus(true);
-					buildApplication.MarkAsBusy();
+					buildApplication.MarkAsBusy();*/
 
-					string appExePath = PublishInterop.GetApplicationExePathFromApplicationName(buildApplication.ApplicationName);
-					string InstalledVersion =
+			string appExePath = PublishInterop.GetApplicationExePathFromApplicationName(this.ApplicationName);
+			string InstalledVersion =
                         File.Exists(appExePath)
-						? FileVersionInfo.GetVersionInfo(appExePath).FileVersion
-						: "0.0.0.0";
-					string errorIfNull;
-					SharedClasses.AutoUpdating.MockPublishDetails onlineVersionDetails;
-					bool? checkSuccess =
-                        AutoUpdating.CheckForUpdatesSilently(buildApplication.ApplicationName, InstalledVersion, out errorIfNull, out onlineVersionDetails);
-					if (checkSuccess == true)//Is up to date
-					{
-						buildApplication.CurrentStatus = BuildApplication.StatusTypes.Success;
-					}
-					else if (checkSuccess == false)//Newer version available
-					{
-						buildApplication.CurrentStatus = StatusTypes.Warning;
-						buildApplication.CurrentStatusText = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
-					}
-					else//Unable to check for updates
-					{
-						OnFeedbackMessage(errorIfNull, FeedbackMessageTypes.Error);
-						/*buildApplication.CurrentStatusText
-							"ERROR: " + errorIfNull;*/
-					}
+				? FileVersionInfo.GetVersionInfo(appExePath).FileVersion
+				: "0.0.0.0";
+			string errorIfNull;
+			SharedClasses.AutoUpdating.MockPublishDetails onlineVersionDetails;
+			bool? checkSuccess =
+				AutoUpdating.CheckForUpdatesSilently(this.ApplicationName, InstalledVersion, out errorIfNull, out onlineVersionDetails);
+			if (checkSuccess == true)//Is up to date
+			{
+				this.CurrentStatus = BuildApplication.StatusTypes.Success;
+			}
+			else if (checkSuccess == false)//Newer version available
+			{
+				this.CurrentStatus = StatusTypes.Warning;
+				this.CurrentStatusText = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
+			}
+			else//Unable to check for updates
+			{
+				OnFeedbackMessage(errorIfNull, FeedbackMessageTypes.Error);
+				/*buildApplication.CurrentStatusText
+					"ERROR: " + errorIfNull;*/
+			}
 
-					buildApplication.MarkAsComplete();
-				};
+			/*buildApplication.MarkAsComplete();
+		};
 
-			if (separateThread)
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, this, false);
-			else
-				checkForUpdatesAction(this);
+	if (separateThread)
+		ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, this, false);
+	else
+		checkForUpdatesAction(this);*/
 		}
 	}
 
