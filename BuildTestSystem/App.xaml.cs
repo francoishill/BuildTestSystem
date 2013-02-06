@@ -220,7 +220,7 @@ namespace BuildTestSystem
 							WriteOutput("Starting to check for subversion changes");
 							if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
 							{
-								buildapp.LastBuildFeedback = changesText;
+								buildapp.CurrentStatusText = changesText;
 								bool hasLocalChanges = TortoiseProcInterop.HasLocalChanges(changesText);
 								bool hasRemoteChanges = TortoiseProcInterop.HasRemoteChanges(changesText);
 								WriteOutput(changesText
@@ -229,7 +229,7 @@ namespace BuildTestSystem
 							}
 							else//Successfully ran, but no subversion changes
 							{
-								buildapp.LastBuildResult = true;
+								buildapp.CurrentStatus = BuildApplication.StatusTypes.Success;
 								WriteOutput("No subversion changes.");//DO NOT CHANGE (same in codeigniter app, application\controllers\buildtestsystem.php)
 							}
 						}
@@ -240,7 +240,7 @@ namespace BuildTestSystem
 							WriteOutput("Starting to check for subversion changes");
 							if (TortoiseProcInterop.CheckFolderSubversionDiff(Path.GetDirectoryName(buildapp.SolutionFullpath), out diffText))
 							{
-								buildapp.LastBuildFeedback = diffText;
+								buildapp.CurrentStatusText = diffText;
 								var separateFileBlocks = diffText.Split(new string[] { "Index:" }, StringSplitOptions.RemoveEmptyEntries);
 								string finalText = "";
 								foreach (var block in separateFileBlocks)//Write each block separately so php can read while we send it
@@ -256,7 +256,7 @@ namespace BuildTestSystem
 							}
 							else//Successfully ran, but no subversion changes
 							{
-								buildapp.LastBuildResult = true;
+								buildapp.CurrentStatus = BuildApplication.StatusTypes.Success;
 								//WriteOutput("No subversion diffs.");
 							}
 						}

@@ -12,7 +12,8 @@
 		UseLayoutRounding='True'
 		Loaded='Window_Loaded'>
 	<Window.Resources>
-		<local:BoolToBrushConverter x:Key='boolToBrushConverter' />
+		<!--<local:BoolToBrushConverter x:Key='boolToBrushConverter' />-->
+		<local:StatusTypeToBrushConverter x:Key='statusTypeToBrushConverter' />
 		<local:BoolToOpacityConverter x:Key='boolToOpacityConverter' />
 		<local:NullableIntToIntConverter x:Key='nullableIntToIntConverter' />
 		<local:NullableIntToBooleanConverter x:Key='nullableIntToBooleanConverter' />
@@ -113,7 +114,7 @@
 							   DockPanel.Dock='Right'
 							   Foreground='Gray'
 							   Cursor='Hand'
-							   MouseLeftButtonUp='textblockAbout_MouseLeftButtonUp' />
+							   MouseLeftButtonUp='TextblockAboutMouseLeftButtonUp' />
 					<TextBlock Name='statusLabel' />
 				</DockPanel>
 			</StackPanel>
@@ -170,14 +171,14 @@
 						Background='Transparent'
 						Foreground='Green'
 						Margin='5 0 0 0'
-						Click='buttonSelectAll_Click' />
+						Click='ButtonSelectAllClick' />
 				<Button Name='buttonUnselectAll'
 						Content='Unselect all'
 						Background='Transparent'
 						Foreground='CadetBlue'
 						Margin='5 0 0 0'
 						Visibility='Hidden'
-						Click='buttonUnselectAll_Click' />
+						Click='ButtonUnselectAllClick' />
 			</StackPanel>
 			<StackPanel Grid.Row='1'
 						Orientation='Horizontal'
@@ -185,45 +186,55 @@
 				<RadioButton Content='All'
 							 Name='radionButtonShowAll'
 							 IsChecked='True'
-							 Click='radioButtonShowAll_Click' />
+							 Click='RadioButtonShowAllClick' />
 				<RadioButton Content='Analysed'
 							 Name='radioButtonShowAnalysed'
 							 Margin='30 0 0 0'
-							 Click='radioButtonShowAnalysed_Click' />
+							 Click='RadioButtonShowAnalysedClick' />
 				<RadioButton Content='Unanalysed'
 							 Name='radioButtonShowUnanalysed'
 							 Margin='10 0 0 0'
-							 Click='radioButtonShowUnanalysed_Click' />
+							 Click='RadioButtonShowUnanalysedClick' />
+				<RadioButton Content='Downloadable'
+							 ToolTip='Is part of the Allowed list which is downloadable from the website.'
+							 Name='radioButtonShowDownloadable'
+							 Margin='30 0 0 0'
+							 Click='RadioButtonShowDownloadableClick' />
+				<RadioButton Content='Non-downloadable'
+							 Name='radioButtonShowNondownloadable'
+							 Margin='10 0 0 0'
+							 Click='RadioButtonShowNondownloadableClick' />
 				<RadioButton Content='Selected'
 							 Name='radioButtonShowSelected'
 							 Margin='30 0 0 0'
-							 Click='radioButtonShowSelected_Click' />
+							 Click='RadioButtonShowSelectedClick' />
 				<RadioButton Content='Unselected'
 							 Name='radioButtonShowUnselected'
 							 Margin='10 0 0 0'
-							 Click='radioButtonShowUnselected_Click' />
+							 Click='RadioButtonShowUnselectedClick' />
 				<RadioButton Content='Installed'
 							 Margin='30 0 0 0'
-							 Click='radioButtonShowInstalled_Click' />
+							 Click='RadioButtonShowInstalledClick' />
 				<RadioButton Content='Uninstalled'
 							 Margin='10 0 0 0'
-							 Click='radioButtonShowUninstalled_Click' />
+							 Click='RadioButtonShowUninstalledClick' />
 				<RadioButton Content='Version controlled'
 							 Margin='30 0 0 0'
-							 Click='radioButtonShowVersioncontrolled_Click' />
+							 Click='RadioButtonShowVersioncontrolledClick' />
 				<RadioButton Content='Unversion controlled'
 							 Margin='10 0 0 0'
-							 Click='radioButtonShowUnversioncontrolled_Click' />
+							 Click='RadioButtonShowUnversioncontrolledClick' />
 			</StackPanel>
 			<TreeView Grid.Row='2'
 					  Name='tmpMainTreeview'
 					  BorderThickness='0'
 					  FontSize='14'
-					  ScrollViewer.CanContentScroll='False'>
+					  ScrollViewer.CanContentScroll='False'
+					  Margin='0,4,0,-4'>
 				<TreeView.ItemTemplate>
 					<DataTemplate>
 						<Border Name='borderMainItemBorder'
-								Background='{Binding LastBuildResult, Converter={StaticResource boolToBrushConverter}}'
+								Background='{Binding CurrentStatus, Converter={StaticResource statusTypeToBrushConverter}}'
 								BorderThickness='1'
 								BorderBrush='#44888888'
 								Margin='0 15 30 15'
@@ -231,7 +242,7 @@
 								CornerRadius='5'
 								Focusable='False'
 								VerticalAlignment='Top'
-								MouseLeftButtonDown='borderMainItemBorder_MouseLeftButtonDown'>
+								MouseLeftButtonDown='BorderMainItemBorderMouseLeftButtonDown'>
 							<Border.ContextMenu>
 								<ContextMenu>
 									<MenuItem Header='Building'>
@@ -244,30 +255,30 @@
 										<MenuItem Header='Publish Online'
 												  Click='contextmenuPublishOnline' />
 										<MenuItem Header='Check for updates'
-												  Click='contextmenuCheckForUpdates' />
+												  Click='ContextmenuCheckForUpdates' />
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->
 										<MenuItem Header='Install latest version (silently)'
-												  Click='contextmenuInstallLatestVersion' />
+												  Click='ContextmenuInstallLatestVersion' />
 										<Separator />
 										<MenuItem Header='Get change logs (only after previous publish)'
 												  Click='contextmenuitemGetChangeLogs_OnlyAfterPreviousPublish_Click' />
 										<MenuItem Header='Get change logs (all)'
-												  Click='contextmenuitemGetChangeLogs_All_Click' />
+												  Click='ContextmenuitemGetChangeLogsAllClick' />
 									</MenuItem>
 									<MenuItem Header='Subversion'>
 										<MenuItem Header='Status'
-												  Click='contextmenuCheckSubversionChanges' />
+												  Click='ContextmenuCheckSubversionChanges' />
 										<MenuItem Header='Update'
-												  Click='contextmenuSubversionUpdate' />
+												  Click='ContextmenuSubversionUpdate' />
 										<MenuItem Header='Show log'
-												  Click='contextmenuShowSubversionLog' />
+												  Click='ContextmenuShowSubversionLog' />
 										<MenuItem Header='Commit'
-												  Click='contextmenuSubversionCommitChanges' />
+												  Click='ContextmenuSubversionCommitChanges' />
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
 									</MenuItem>
 									<MenuItem Header='Messages'>
 										<MenuItem Header='_Clear messages'
-												  Click='contextmenuitemClearMessages_Click' />
+												  Click='ContextmenuitemClearMessagesClick' />
 									</MenuItem>
 									<!--<MenuItem Header='Testing'
 											  Visibility='{Binding IsFrancoisPc, Converter={StaticResource booleanToVisibilityConverter}}'>
@@ -316,7 +327,7 @@
 									</StackPanel>
 								</StackPanel>
 								<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
-									<TextBox Text='{Binding LastBuildFeedback}'
+									<TextBox Text='{Binding CurrentStatusText}'
 											 ScrollViewer.CanContentScroll='True'
 											 ScrollViewer.HorizontalScrollBarVisibility='Auto'
 											 ScrollViewer.VerticalScrollBarVisibility='Auto'
@@ -334,7 +345,7 @@
 											Value='{StaticResource ItemHoverBackgroundBrush}' />-->
 								<Setter Property='BorderBrush'
 										TargetName='borderMainItemBorder'
-										Value='#777' />
+										Value='#aaa' />
 								<Setter Property='Opacity'
 										TargetName='checkboxIsSelected'
 										Value='1' />
@@ -344,12 +355,12 @@
 								<!--<Setter Property="Background"
 										TargetName="borderMainItemBorder"
 										Value='{StaticResource ItemHoverBackgroundBrush}' />-->
-								<Setter Property='BorderThickness'
+								<!--<Setter Property='BorderThickness'
 										TargetName='borderMainItemBorder'
-										Value='2' />
+										Value='2' />-->
 								<Setter Property='BorderBrush'
 										TargetName='borderMainItemBorder'
-										Value='#777' />
+										Value='#333' />
 								<Setter Property='Opacity'
 										TargetName='checkboxIsSelected'
 										Value='1' />
