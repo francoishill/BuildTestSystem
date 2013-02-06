@@ -311,10 +311,10 @@ namespace BuildTestSystem
 				var allBuildResult = VsBuildProject.PerformMultipleBuild(
 					applist,
 					out errors,
-					(appwhichstart) =>
+					(appwhichstarted) =>
 					{
-						ShowIndeterminateProgress("Building application: " + appwhichstart.ApplicationName, (BuildApplication)appwhichstart, true);
-						stopwatches.Add((BuildApplication)appwhichstart, Stopwatch.StartNew());
+						ShowIndeterminateProgress("Building application: " + appwhichstarted.ApplicationName, (BuildApplication)appwhichstarted, true);
+						stopwatches.Add((BuildApplication)appwhichstarted, Stopwatch.StartNew());
 					},
 					(appwhichbuildcomplete, buildSuccess) =>
 					{
@@ -325,7 +325,7 @@ namespace BuildTestSystem
 							//appswithErrors.Add(buildapp.ApplicationName);
 							MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error);
 						}
-						HideIndeterminateProgress((BuildApplication)appwhichbuildcomplete, true);
+						//HideIndeterminateProgress((BuildApplication)appwhichbuildcomplete, true);
 						MainWindow.SetWindowProgressValue(((double)(++completeCount)) / (double)listOfAppsToBuild.Count());
 					});
 				var appswithErrors = allBuildResult.Keys.Where(k => !allBuildResult[k]).Select(k => k.ApplicationName).ToList();
