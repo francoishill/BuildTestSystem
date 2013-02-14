@@ -107,6 +107,9 @@
     <Compile Include="..\..\SharedClasses\StandaloneUploaderInterop.cs">
       <Link>StandaloneUploaderInterop.cs</Link>
     </Compile>
+    <Compile Include="..\..\SharedClasses\SvnInterop.cs">
+      <Link>SvnInterop.cs</Link>
+    </Compile>
     <Compile Include="..\..\SharedClasses\UploadingProtocolTypesEnum.cs">
       <Link>UploadingProtocolTypesEnum.cs</Link>
     </Compile>

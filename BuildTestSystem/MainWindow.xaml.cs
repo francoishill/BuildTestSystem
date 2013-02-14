@@ -848,6 +848,19 @@ namespace BuildTestSystem
 			}
 		}
 
+		private void ContextmenuSubversionCommitSameMessage(object sender, RoutedEventArgs e)
+		{
+			var msg = InputBoxWPF.Prompt("Please enter the commit message to be used for all", "Common commit message");
+			if (msg == null) return;
+			DoOperationWithApps(
+				(app) => app.CommitMessage(msg),
+				"Commit same message",
+				"Busy committing message, please be patient...",
+				true,
+				true,
+				(app) => ((BuildApplication)app).IsVersionControlled == true);
+		}
+
 		private void ContextmenuSubversionCommitChanges(object sender, RoutedEventArgs e)
 		{
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
@@ -1270,6 +1283,47 @@ namespace BuildTestSystem
 		ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForUpdatesAction, this, false);
 	else
 		checkForUpdatesAction(this);*/
+		}
+
+		public void CommitMessage(string commitMessage)
+		{
+			string changesText;
+			OnFeedbackMessage("Busy checking for subversion changes first", FeedbackMessageTypes.Status);
+			if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
+			{
+				//we don't make use currently of the returned messages from the following method
+				SubversionInterop.PerformSubversionCommand(
+					null,
+					string.Format("{0};{1}", this.GetSolutionDirectory(), commitMessage),
+					SubversionInterop.SubversionCommand.Commit,
+					(sn, ev) =>
+					{
+						FeedbackMessageTypes fbt = FeedbackMessageTypes.Status;
+						switch (ev.FeedbackType)
+						{
+							case TextFeedbackType.Error:
+								fbt = FeedbackMessageTypes.Error;
+								break;
+							case TextFeedbackType.Success:
+								fbt = FeedbackMessageTypes.Success;
+								break;
+							case TextFeedbackType.Noteworthy:
+								fbt = FeedbackMessageTypes.Warning;
+								break;
+							case TextFeedbackType.Subtle:
+								fbt = FeedbackMessageTypes.Status;
+								break;
+						}
+						OnFeedbackMessage(ev.FeedbackText, fbt);
+					});
+
+				if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
+					OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
+				else
+					OnFeedbackMessage(null, FeedbackMessageTypes.Success);
+			}
+			else
+				OnFeedbackMessage("Application had no subversion changes", FeedbackMessageTypes.Warning);
 		}
 	}
 

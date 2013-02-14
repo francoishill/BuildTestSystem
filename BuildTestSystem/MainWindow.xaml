@@ -366,6 +366,9 @@
 												  Click='ContextmenuSubversionUpdate' />
 										<MenuItem Header='Show log'
 												  Click='ContextmenuShowSubversionLog' />
+										<MenuItem Header='Commit (same message)'
+												  ToolTip='Get prompted for the commit message and use this message for all selected apps'
+												  Click='ContextmenuSubversionCommitSameMessage'/>
 										<MenuItem Header='Commit'
 												  Click='ContextmenuSubversionCommitChanges' />
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
