@@ -348,6 +348,9 @@
 									<MenuItem Header='Publish/update'>
 										<MenuItem Header='Publish Online'
 												  Click='contextmenuPublishOnline' />
+										<MenuItem Header='Publish Online (do not run)'
+												  ToolTip='Will publish and install (silently) the application locally but will not run it afterwards.'
+												  Click='contextmenuPublishOnlineButDoNotRunAfterInstallingSilently' />
 										<MenuItem Header='Check for updates'
 												  Click='ContextmenuCheckForUpdates' />
 										<!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter}}' />-->

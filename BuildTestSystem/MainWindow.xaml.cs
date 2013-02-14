@@ -96,7 +96,7 @@ namespace BuildTestSystem
 				});
 		}
 
-		private void DoOperationWithApps(Action<BuildApplication> actionOnEachApp, string OperationDisplayName, string InitialStatusMessage,
+		private void DoOperationWithApps(IEnumerable<BuildApplication> appsList, Action<BuildApplication> actionOnEachApp, string OperationDisplayName, string InitialStatusMessage,
 			bool AllowConcurrent, bool ClearAppStatusTextFirst, Predicate<VsBuildProject> ShouldIncludeApp)
 		{
 			var settings = new VsBuildProject.OverallOperationSettings(
@@ -118,7 +118,7 @@ namespace BuildTestSystem
 				   VsBuildProject.OverallOperationSettings.DurationMeasurementType.Both);
 
 			BuildApplication.DoOperation(
-				listOfApplications,
+				appsList,
 				(app) => actionOnEachApp((BuildApplication)app),
 				settings);
 		}
@@ -388,6 +388,7 @@ namespace BuildTestSystem
 		private void buttonCheckForUpdatesAll_Click(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
+				listOfApplications,
 				(app) => app.CheckForUpdates(false),
 				"Check for updates",
 				"Busy checking for updates, please be patient...",
@@ -535,6 +536,7 @@ namespace BuildTestSystem
 		private void buttonTestClick(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
+				listOfApplications,
 				(app) => { Thread.Sleep(500); },
 				"Testing operation",
 				"This is the initial message",
@@ -670,10 +672,17 @@ namespace BuildTestSystem
 		{
 			var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
 			foreach (var buildapp in buildapps)
-				PublishApp(buildapp, true);
+				PublishApp(buildapp, true, true);
 		}
 
-		private void PublishApp(BuildApplication buildapplication, bool waitUntilFinish = false)//, bool _32bitOnly = false)
+		private void contextmenuPublishOnlineButDoNotRunAfterInstallingSilently(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
+			foreach (var buildapp in buildapps)
+				PublishApp(buildapp, true, false);
+		}
+
+		private void PublishApp(BuildApplication buildapplication, bool waitUntilFinish = false, bool runAfterInstallingSilently = true)//, bool _32bitOnly = false)
 		{
 			//var buildapps = GetBuildAppList_FromContextMenu(sender);
 			//foreach (var buildapplication in buildapps)
@@ -683,7 +692,7 @@ namespace BuildTestSystem
 
 			buildapplication.CurrentStatusText = "";
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
-				(buildapp) => buildapp.PerformPublishOnline(),
+				(buildapp) => buildapp.PerformPublishOnline(runAfterInstallingSilently),
 			buildapplication,
 			waitUntilFinish);
 			//}
@@ -852,7 +861,11 @@ namespace BuildTestSystem
 		{
 			var msg = InputBoxWPF.Prompt("Please enter the commit message to be used for all", "Common commit message");
 			if (msg == null) return;
+
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+
 			DoOperationWithApps(
+				buildapps,
 				(app) => app.CommitMessage(msg),
 				"Commit same message",
 				"Busy committing message, please be patient...",
@@ -1308,7 +1321,7 @@ namespace BuildTestSystem
 								fbt = FeedbackMessageTypes.Success;
 								break;
 							case TextFeedbackType.Noteworthy:
-								fbt = FeedbackMessageTypes.Warning;
+								fbt = FeedbackMessageTypes.Status;//FeedbackMessageTypes.Warning;
 								break;
 							case TextFeedbackType.Subtle:
 								fbt = FeedbackMessageTypes.Status;
