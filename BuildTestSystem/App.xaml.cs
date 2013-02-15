@@ -228,7 +228,7 @@ namespace BuildTestSystem
 							WriteOutput("Starting to check for subversion changes");
 							if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
 							{
-								buildapp.CurrentStatusText = changesText;
+								buildapp.AppendCurrentStatusText(changesText);
 								bool hasLocalChanges = TortoiseProcInterop.HasLocalChanges(changesText);
 								bool hasRemoteChanges = TortoiseProcInterop.HasRemoteChanges(changesText);
 								WriteOutput(changesText
@@ -248,7 +248,7 @@ namespace BuildTestSystem
 							WriteOutput("Starting to check for subversion changes");
 							if (TortoiseProcInterop.CheckFolderSubversionDiff(Path.GetDirectoryName(buildapp.SolutionFullpath), out diffText))
 							{
-								buildapp.CurrentStatusText = diffText;
+								buildapp.AppendCurrentStatusText(diffText);
 								var separateFileBlocks = diffText.Split(new string[] { "Index:" }, StringSplitOptions.RemoveEmptyEntries);
 								string finalText = "";
 								foreach (var block in separateFileBlocks)//Write each block separately so php can read while we send it

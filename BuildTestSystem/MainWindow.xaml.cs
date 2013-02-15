@@ -729,7 +729,6 @@ namespace BuildTestSystem
 			MainWindow.SetWindowProgressState(TaskbarItemProgressState.Normal);
 			MainWindow.SetWindowProgressValue(0);
 
-			buildapplication.CurrentStatusText = "";
 			ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 				(buildapp) => buildapp.PerformPublishOnline(runAfterInstallingSilently),
 			buildapplication,
@@ -1221,7 +1220,7 @@ namespace BuildTestSystem
 		private string _applicationname;
 		public override string ApplicationName { get { return _applicationname; } set { _applicationname = value; OnPropertyChanged("ApplicationName"); } }
 		private string _currentstatustext;
-		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } set { _currentstatustext = value; OnPropertyChanged("CurrentStatusText", "HasFeedbackText"); } }
+		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } protected set { _currentstatustext = value; OnPropertyChanged("CurrentStatusText", "HasFeedbackText"); } }
 		public override bool HasFeedbackText { get { return !string.IsNullOrWhiteSpace(CurrentStatusText); } }
 		/*private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }*/
@@ -1409,7 +1408,7 @@ namespace BuildTestSystem
 			else if (checkSuccess == false)//Newer version available
 			{
 				this.CurrentStatus = StatusTypes.Warning;
-				this.CurrentStatusText = "Newer version available: " + onlineVersionDetails.ApplicationVersion;
+				this.AppendCurrentStatusText("Newer version available: " + onlineVersionDetails.ApplicationVersion);
 			}
 			else//Unable to check for updates
 			{

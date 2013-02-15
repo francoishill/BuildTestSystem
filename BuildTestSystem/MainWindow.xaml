@@ -427,7 +427,7 @@
                                     </StackPanel>
                                 </StackPanel>
                                 <Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
-                                    <TextBox Text='{Binding CurrentStatusText}'
+                                    <TextBox Text='{Binding CurrentStatusText, Mode=OneWay}'
                                              ScrollViewer.CanContentScroll='True'
                                              ScrollViewer.HorizontalScrollBarVisibility='Auto'
                                              ScrollViewer.VerticalScrollBarVisibility='Auto'
