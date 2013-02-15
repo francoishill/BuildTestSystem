@@ -96,8 +96,9 @@ namespace BuildTestSystem
 				});
 		}
 
-		private void DoOperationWithApps(IEnumerable<BuildApplication> appsList, Action<BuildApplication> actionOnEachApp, string OperationDisplayName, string InitialStatusMessage,
-			bool AllowConcurrent, bool ClearAppStatusTextFirst, Predicate<VsBuildProject> ShouldIncludeApp)
+		private void DoOperationWithApps(IEnumerable<BuildApplication> appsList, Action<BuildApplication> actionOnEachApp,
+			string OperationDisplayName, string InitialStatusMessage,bool AllowConcurrent, 
+			bool ClearAppStatusTextFirst, Predicate<BuildApplication> ShouldIncludeApp)
 		{
 			var settings = new VsBuildProject.OverallOperationSettings(
 				   OperationDisplayName,
@@ -114,7 +115,7 @@ namespace BuildTestSystem
 				   (mes, msgtype) =>
 					   this.Dispatcher.BeginInvoke((Action)delegate { this.statusLabel.Text = mes; }),//ShowIndeterminateProgress(mes, null, true),
 				   ClearAppStatusTextFirst,
-				   ShouldIncludeApp,
+				   app => ShouldIncludeApp((BuildApplication)app),
 				   VsBuildProject.OverallOperationSettings.DurationMeasurementType.Both);
 
 			BuildApplication.DoOperation(
@@ -312,6 +313,7 @@ namespace BuildTestSystem
 
 		private void BuildListOfApplications(IEnumerable<BuildApplication> listOfAppsToBuild)
 		{
+			//Because we use 'VsBuildProject.PerformMultipleBuild', we cannot just port the code to 'this.DoOperationWithApps'
 			if (BuildApplication.IsBusyBuilding(true))
 				return;
 			BuildApplication.SetIsBusyBuildingTrue(true);
@@ -459,7 +461,16 @@ namespace BuildTestSystem
 
 		private void buttonCheckVersioningStatusAll_Click(object sender, RoutedEventArgs e)
 		{
-			if (BuildApplication.IsBusyBuilding(true))
+			DoOperationWithApps(
+				listOfApplications,
+				app => app.CheckForSubversionChanges(false),
+				"Checking updates",
+				"Checking all applications for updates.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+
+			/*if (BuildApplication.IsBusyBuilding(true))
 				return;
 			BuildApplication.SetIsBusyBuildingTrue(true);
 
@@ -499,19 +510,19 @@ namespace BuildTestSystem
 				//    AppCheckForUpdates(buildapp, false);
 				//    TaskbarManager.Instance.SetProgressValue(i + 1, items.Count);
 				//}//);
-				/*if (appswithErrors.Count > 0)
-				{
-					MainWindow.SetWindowProgressValue(1);
-					MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error, OverlayImage.VersionControlChanges);
-					//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
-					//    string.Join(Environment.NewLine, appswithErrors));
-				}
-				else
-					MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);*/
+				//if (appswithErrors.Count > 0)
+				//{
+				//	MainWindow.SetWindowProgressValue(1);
+				//	MainWindow.SetWindowProgressState(TaskbarItemProgressState.Error, OverlayImage.VersionControlChanges);
+				//	//UserMessages.ShowErrorMessage("Error building the following apps: " + Environment.NewLine +
+				//	//    string.Join(Environment.NewLine, appswithErrors));
+				//}
+				//else
+				//	MainWindow.SetWindowProgressState(TaskbarItemProgressState.None);
 				HideIndeterminateProgress(null, true);
 				BuildApplication.SetIsBusyBuildingTrue(false);
 			},
-			false);
+			false);*/
 		}
 
 		private TaskbarItemProgressState GetTaskbarItemProgressStateFromProgressState(VsBuildProject.ProgressStates progressState)
@@ -661,25 +672,53 @@ namespace BuildTestSystem
 
 		private void contextmenuOpenWithCSharpExpress(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.OpenInCSharpExpress(),
+				"Opening in C#",
+				"Opening selected applications in C# IDE",
+				true,
+				true,
+				app => true);
+
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				buildapp.OpenInCSharpExpress();
-			}
+			}*/
 		}
 
 		private void contextmenuPublishOnline(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender, false),
+				app => PublishApp(app, true, true),
+				"Publishing applications",
+				"Starting to publish",
+				false,//Cannot allow concurrent, cannot build simultaneously
+				true,
+				app => true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
 			foreach (var buildapp in buildapps)
-				PublishApp(buildapp, true, true);
+				PublishApp(buildapp, true, true);*/
 		}
 
 		private void contextmenuPublishOnlineButDoNotRunAfterInstallingSilently(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender, false),
+				app => PublishApp(app, true, false),
+				"Publishing applications (without running afterwards)",
+				"Starting to publish (will not run afterwards)",
+				false,//Cannot allow concurrent, cannot build simultaneously
+				true,
+				app => true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender, false);//true);
 			foreach (var buildapp in buildapps)
-				PublishApp(buildapp, true, false);
+				PublishApp(buildapp, true, false);*/
 		}
 
 		private void PublishApp(BuildApplication buildapplication, bool waitUntilFinish = false, bool runAfterInstallingSilently = true)//, bool _32bitOnly = false)
@@ -700,14 +739,32 @@ namespace BuildTestSystem
 
 		private void ContextmenuCheckForUpdates(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.CheckForUpdates(false),
+				"Check for updates",
+				"Starting to check for updates",
+				true,
+				true,
+				app => app.IsInstalled == true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
-				buildapp.CheckForUpdates(true);
+				buildapp.CheckForUpdates(true);*/
 		}
 
 		private void ContextmenuInstallLatestVersion(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.InstallLatest(null),
+				"Install latest version",
+				"Installing latest version",
+				true,
+				true,
+				app => true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				ShowIndeterminateProgress("Installing latest version of " + buildapp.ApplicationName, buildapp, false);
@@ -717,7 +774,7 @@ namespace BuildTestSystem
 						HideIndeterminateProgress(null, true);
 						HideIndeterminateProgress(ba, true);
 					});
-			}
+			}*/
 		}
 
 		/*private void FeedbackMessageAction(BuildApplication buildapp, string message, FeedbackMessageTypes feedbackType)
@@ -761,14 +818,32 @@ namespace BuildTestSystem
 
 		private void contextmenuitemGetChangeLogs_OnlyAfterPreviousPublish_Click(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
-			GetChangelogsForBuildapps(buildapps, true);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.GetChangeLogs(true),
+				"Get changelogs (only after previous publish)",
+				"Starting to get changelogs (only after previous publish)",
+				true,
+				true,
+				app => true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
+			GetChangelogsForBuildapps(buildapps, true);*/
 		}
 
 		private void ContextmenuitemGetChangeLogsAllClick(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
-			GetChangelogsForBuildapps(buildapps, false);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.GetChangeLogs(false),
+				"Get changelogs (from beginning of time)",
+				"Starting to get changelogs (from beginning of time)",
+				true,
+				true,
+				app => true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
+			GetChangelogsForBuildapps(buildapps, false);*/
 		}
 
 		private bool _actionOnAppsAlreadyBusy = false;
@@ -803,19 +878,42 @@ namespace BuildTestSystem
 
 		private void ContextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.CheckForSubversionChanges(false),
+				"Checking subversion changes",
+				"Starting to check for subversion changes.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				if (buildapp.IsVersionControlled != true)
 					UserMessages.ShowWarningMessage("Directory is not version controlled: " + buildapp.GetSolutionDirectory());
 				else
 					buildapp.CheckForSubversionChanges(true);
-			}
+			}*/
 		}
 
 		private void ContextmenuSubversionUpdate(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app =>
+				{
+					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, app.GetSolutionDirectory())
+						.WaitForExit();
+					app.CheckForSubversionChanges(false);
+				},
+				"Show subversion udpates dialog",
+				"Starting to show subversion updates dialog.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				if (buildapp.IsVersionControlled != true)
@@ -832,12 +930,26 @@ namespace BuildTestSystem
 						buildapp,
 						false);
 				}
-			}
+			}*/
 		}
 
 		private void ContextmenuShowSubversionLog(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app =>
+				{
+					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, app.GetSolutionDirectory())
+						.WaitForExit();
+					app.CheckForSubversionChanges(false);
+				},
+				"Show subversion log",
+				"Starting to show subversion log.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				if (buildapp.IsVersionControlled != true)
@@ -854,12 +966,12 @@ namespace BuildTestSystem
 						buildapp,
 						false);
 				}
-			}
+			}*/
 		}
 
 		private void ContextmenuSubversionCommitSameMessage(object sender, RoutedEventArgs e)
 		{
-			var msg = InputBoxWPF.Prompt("Please enter the commit message to be used for all", "Common commit message");
+			var msg = InputBoxWPF.Prompt("Please enter the subversion commit message to be used for all", "Common commit message");
 			if (msg == null) return;
 
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
@@ -867,8 +979,8 @@ namespace BuildTestSystem
 			DoOperationWithApps(
 				buildapps,
 				(app) => app.CommitMessage(msg),
-				"Commit same message",
-				"Busy committing message, please be patient...",
+				"Commit same subversion message",
+				"Busy committing subversion message, please be patient...",
 				true,
 				true,
 				(app) => ((BuildApplication)app).IsVersionControlled == true);
@@ -876,7 +988,21 @@ namespace BuildTestSystem
 
 		private void ContextmenuSubversionCommitChanges(object sender, RoutedEventArgs e)
 		{
-			var buildapps = GetBuildAppList_FromContextMenu(sender);
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app =>
+				{
+					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, app.GetSolutionDirectory())
+						.WaitForExit();
+					app.CheckForSubversionChanges(false);
+				},
+				"Show subversion commit dialog",
+				"Starting to show subversion commit dialog.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+
+			/*var buildapps = GetBuildAppList_FromContextMenu(sender);
 			foreach (var buildapp in buildapps)
 			{
 				if (buildapp.IsVersionControlled != true)
@@ -893,7 +1019,7 @@ namespace BuildTestSystem
 						buildapp,
 						false);
 				}
-			}
+			}*/
 		}
 
 		private void ContextmenuitemClearMessagesClick(object sender, RoutedEventArgs e)
@@ -952,6 +1078,7 @@ namespace BuildTestSystem
 
 			ForeachBuildappBorder((ba, border) =>
 			{
+				ba.IsSelected = false;//Unselect all when visibility changes
 				if (predicate(ba))
 					border.Visibility = System.Windows.Visibility.Visible;
 				else
@@ -1160,7 +1287,7 @@ namespace BuildTestSystem
 
 		public void InstallLatest(Action<BuildApplication> actionOnComplete, bool installSilently = true)
 		{
-			AutoUpdating.InstallLatest(this.ApplicationName, OnErrorMessage, delegate { actionOnComplete(this); }, installSilently);
+			AutoUpdating.InstallLatest(this.ApplicationName, OnErrorMessage, delegate { if (actionOnComplete != null) actionOnComplete(this); }, installSilently);
 		}
 
 		public void GetChangeLogs(bool onlyAfterPreviousPublish)
@@ -1201,36 +1328,38 @@ namespace BuildTestSystem
 
 		public void OpenInCSharpExpress()
 		{
-			var csharpPath = RegistryInterop.GetAppPathFromRegistry("VCSExpress.exe");
-			if (csharpPath == null)
+			var cspath = RegistryInterop.GetAppPathFromRegistry("VCSExpress.exe");
+			if (cspath == null)
 			{
 				UserMessages.ShowErrorMessage("Cannot obtain CSharp Express path from registry.");
 				return;
 			}
-			ThreadingInterop.PerformOneArgFunctionSeperateThread<string>((cspath) =>
+
+			string csharpPath = cspath;
+			//ThreadingInterop.PerformOneArgFunctionSeperateThread<string>((csharpPath) =>
+			//{
+			var proc = Process.Start(csharpPath, "\"" + this.SolutionFullpath + "\"");
+			if (proc != null)
 			{
-				var proc = Process.Start(csharpPath, "\"" + this.SolutionFullpath + "\"");
-				if (proc != null)
+				proc.WaitForExit();
+
+				if (IsBusyBuilding(true))
+					return;
+				_isbusyBuilding = true;
+
+				try
 				{
-					proc.WaitForExit();
-
-					if (IsBusyBuilding(true))
-						return;
-					_isbusyBuilding = true;
-
-					try
-					{
-						List<string> csprojectPaths;
-						this.PerformBuild(out csprojectPaths);
-					}
-					finally
-					{
-						_isbusyBuilding = false;
-					}
+					List<string> csprojectPaths;
+					this.PerformBuild(out csprojectPaths);
 				}
-			},
-			csharpPath,
-			false);
+				finally
+				{
+					_isbusyBuilding = false;
+				}
+			}
+			//},
+			//cspath,
+			//false);
 		}
 
 		public void CheckForSubversionChanges(bool separateThread)
