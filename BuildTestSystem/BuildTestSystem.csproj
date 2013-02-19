@@ -92,6 +92,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="..\..\SharedClasses\GitInterop.cs">
+      <Link>GitInterop.cs</Link>
+    </Compile>
     <Compile Include="..\..\SharedClasses\Helpers.cs">
       <Link>Helpers.cs</Link>
     </Compile>
@@ -106,9 +109,6 @@
     </Compile>
     <Compile Include="..\..\SharedClasses\StandaloneUploaderInterop.cs">
       <Link>StandaloneUploaderInterop.cs</Link>
-    </Compile>
-    <Compile Include="..\..\SharedClasses\SvnInterop.cs">
-      <Link>SvnInterop.cs</Link>
     </Compile>
     <Compile Include="..\..\SharedClasses\UploadingProtocolTypesEnum.cs">
       <Link>UploadingProtocolTypesEnum.cs</Link>

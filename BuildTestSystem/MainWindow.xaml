@@ -362,18 +362,20 @@
                                         <MenuItem Header='Get change logs (from beginning of time)'
                                                   Click='ContextmenuitemGetChangeLogsAllClick' />
                                     </MenuItem>
-                                    <MenuItem Header='Subversion'>
+                                    <MenuItem Header='Git'>
                                         <MenuItem Header='Status'
-                                                  Click='ContextmenuCheckSubversionChanges' />
-                                        <MenuItem Header='Update'
-                                                  Click='ContextmenuSubversionUpdate' />
+                                                  Click='ContextmenuCheckGitChanges' />
+                                        <MenuItem Header='Pull'
+                                                  Click='ContextmenuGitPull' />
                                         <MenuItem Header='Show log'
-                                                  Click='ContextmenuShowSubversionLog' />
-                                        <MenuItem Header='Commit (same message)'
+                                                  Click='ContextmenuShowGitLog' />
+                                        <MenuItem Header='Commit locally (same message)'
                                                   ToolTip='Get prompted for the commit message and use this message for all selected apps'
-                                                  Click='ContextmenuSubversionCommitSameMessage' />
-                                        <MenuItem Header='Commit'
-                                                  Click='ContextmenuSubversionCommitChanges' />
+                                                  Click='ContextmenuGitCommitLocallySameMessage' />
+                                        <MenuItem Header='Commit locally'
+                                                  Click='ContextmenuGitCommitLocallyChanges' />
+                                        <MenuItem Header='Push'
+                                                  Click='ContextmenuGitPush' />
                                         <!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
                                     </MenuItem>
                                     <MenuItem Header='Messages'>

@@ -463,7 +463,7 @@ namespace BuildTestSystem
 		{
 			DoOperationWithApps(
 				listOfApplications,
-				app => app.CheckForSubversionChanges(false),
+				app => app.CheckForGitChanges(false),
 				"Checking updates",
 				"Checking all applications for updates.",
 				true,
@@ -875,11 +875,11 @@ namespace BuildTestSystem
 			false);
 		}
 
-		private void ContextmenuCheckSubversionChanges(object sender, RoutedEventArgs e)
+		private void ContextmenuCheckGitChanges(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
 				GetBuildAppList_FromContextMenu(sender),
-				app => app.CheckForSubversionChanges(false),
+				app => app.CheckForGitChanges(false),
 				"Checking subversion changes",
 				"Starting to check for subversion changes.",
 				true,
@@ -896,15 +896,15 @@ namespace BuildTestSystem
 			}*/
 		}
 
-		private void ContextmenuSubversionUpdate(object sender, RoutedEventArgs e)
+		private void ContextmenuGitPull(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
 				GetBuildAppList_FromContextMenu(sender),
 				app =>
 				{
-					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, app.GetSolutionDirectory())
+					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Pull, app.GetSolutionDirectory())
 						.WaitForExit();
-					app.CheckForSubversionChanges(false);
+					app.CheckForGitChanges(false);
 				},
 				"Show subversion udpates dialog",
 				"Starting to show subversion updates dialog.",
@@ -922,7 +922,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Update, buildapp.GetSolutionDirectory());
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Update, buildapp.GetSolutionDirectory());
 							p.WaitForExit();
 							b.CheckForSubversionChanges(false);
 						},
@@ -932,15 +932,15 @@ namespace BuildTestSystem
 			}*/
 		}
 
-		private void ContextmenuShowSubversionLog(object sender, RoutedEventArgs e)
+		private void ContextmenuShowGitLog(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
 				GetBuildAppList_FromContextMenu(sender),
 				app =>
 				{
-					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, app.GetSolutionDirectory())
+					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Log, app.GetSolutionDirectory())
 						.WaitForExit();
-					app.CheckForSubversionChanges(false);
+					app.CheckForGitChanges(false);
 				},
 				"Show subversion log",
 				"Starting to show subversion log.",
@@ -958,7 +958,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Log, buildapp.GetSolutionDirectory());
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Log, buildapp.GetSolutionDirectory());
 							p.WaitForExit();
 							b.CheckForSubversionChanges(false);
 						},
@@ -968,7 +968,7 @@ namespace BuildTestSystem
 			}*/
 		}
 
-		private void ContextmenuSubversionCommitSameMessage(object sender, RoutedEventArgs e)
+		private void ContextmenuGitCommitLocallySameMessage(object sender, RoutedEventArgs e)
 		{
 			var msg = InputBoxWPF.Prompt("Please enter the subversion commit message to be used for all", "Common commit message");
 			if (msg == null) return;
@@ -985,15 +985,17 @@ namespace BuildTestSystem
 				(app) => ((BuildApplication)app).IsVersionControlled == true);
 		}
 
-		private void ContextmenuSubversionCommitChanges(object sender, RoutedEventArgs e)
+		private void ContextmenuGitCommitLocallyChanges(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
 				GetBuildAppList_FromContextMenu(sender),
 				app =>
 				{
-					TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, app.GetSolutionDirectory())
+					TortoiseProcInterop.Git_StartTortoiseProc(
+						TortoiseProcInterop.TortoiseGitCommands.Commit,
+						app.GetSolutionDirectory())
 						.WaitForExit();
-					app.CheckForSubversionChanges(false);
+					app.CheckForGitChanges(false);
 				},
 				"Show subversion commit dialog",
 				"Starting to show subversion commit dialog.",
@@ -1011,7 +1013,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.StartTortoiseProc(TortoiseProcInterop.TortoiseCommands.Commit, buildapp.GetSolutionDirectory());
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Commit, buildapp.GetSolutionDirectory());
 							p.WaitForExit();
 							b.CheckForSubversionChanges(false);
 						},
@@ -1019,6 +1021,25 @@ namespace BuildTestSystem
 						false);
 				}
 			}*/
+		}
+
+		private void ContextmenuGitPush(object sender, RoutedEventArgs e)
+		{
+			DoOperationWithApps(
+				   GetBuildAppList_FromContextMenu(sender),
+				   app =>
+				   {
+					   TortoiseProcInterop.Git_StartTortoiseProc(
+						   TortoiseProcInterop.TortoiseGitCommands.Push,
+						   app.GetSolutionDirectory())
+						   .WaitForExit();
+					   app.CheckForGitChanges(false);
+				   },
+				   "Show subversion commit dialog",
+				   "Starting to show subversion commit dialog.",
+				   true,
+				   true,
+				   app => app.IsVersionControlled == true);
 		}
 
 		private void ContextmenuitemClearMessagesClick(object sender, RoutedEventArgs e)
@@ -1228,7 +1249,7 @@ namespace BuildTestSystem
 		public override StatusTypes CurrentStatus { get { return _currentStatus; } set { _currentStatus = value; OnPropertyChanged("CurrentStatus"); } }
 
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
-		public bool? IsVersionControlled { get { return OwnAppsInterop.DirIsValidSvnPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
+		public bool? IsVersionControlled { get { return OwnAppsInterop.DirIsValidGitPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
 		private bool? _isselected;
 		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged("IsSelected"); } }
@@ -1361,16 +1382,16 @@ namespace BuildTestSystem
 			//false);
 		}
 
-		public void CheckForSubversionChanges(bool separateThread)
+		public void CheckForGitChanges(bool separateThread)
 		{
-			Action<BuildApplication> checkForSubversionChanges =
+			Action<BuildApplication> checkForGitChanges =
                 (buildApplication) =>
 				{
 					buildApplication.ResetStatus(true);
 					buildApplication.MarkAsBusy();
 
 					string changesText;
-					if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(this.SolutionFullpath), out changesText))
+					if (TortoiseProcInterop.CheckFolderGitChanges(Path.GetDirectoryName(this.SolutionFullpath), out changesText))
 						OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
 					else
 						OnFeedbackMessage(null, FeedbackMessageTypes.Success);//buildApplication.CurrentStatus = BuildApplication.StatusTypes.Success;
@@ -1379,9 +1400,9 @@ namespace BuildTestSystem
 				};
 
 			if (separateThread)
-				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForSubversionChanges, this, true);
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForGitChanges, this, true);
 			else
-				checkForSubversionChanges(this);
+				checkForGitChanges(this);
 		}
 
 		public void CheckForUpdates(bool separateThread)
@@ -1430,13 +1451,13 @@ namespace BuildTestSystem
 		{
 			string changesText;
 			OnFeedbackMessage("Busy checking for subversion changes first", FeedbackMessageTypes.Status);
-			if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
+			if (TortoiseProcInterop.CheckFolderGitChanges(this.GetSolutionDirectory(), out changesText))
 			{
 				//we don't make use currently of the returned messages from the following method
-				SubversionInterop.PerformSubversionCommand(
+				GitInterop.PerformGitCommand(
 					null,
 					string.Format("{0};{1}", this.GetSolutionDirectory(), commitMessage),
-					SubversionInterop.SubversionCommand.Commit,
+					GitInterop.GitCommand.Commit,
 					(sn, ev) =>
 					{
 						FeedbackMessageTypes fbt = FeedbackMessageTypes.Status;

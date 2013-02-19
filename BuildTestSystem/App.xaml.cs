@@ -229,8 +229,8 @@ namespace BuildTestSystem
 							if (TortoiseProcInterop.CheckFolderSubversionChanges(Path.GetDirectoryName(buildapp.SolutionFullpath), out changesText))
 							{
 								buildapp.AppendCurrentStatusText(changesText);
-								bool hasLocalChanges = TortoiseProcInterop.HasLocalChanges(changesText);
-								bool hasRemoteChanges = TortoiseProcInterop.HasRemoteChanges(changesText);
+								bool hasLocalChanges = TortoiseProcInterop.Subversion_HasLocalChanges(changesText);
+								bool hasRemoteChanges = TortoiseProcInterop.Subversion_HasRemoteChanges(changesText);
 								WriteOutput(changesText
 									+ (hasLocalChanges ? "[HASLOCALSUBVERSIONCHANGES]" : "")
 									+ (hasRemoteChanges ? "[HASREMOTESUBVERSIONCHANGES]" : ""));//To say we had changes
@@ -276,7 +276,7 @@ namespace BuildTestSystem
 						WriteOutput("Updating subversion " + arg2appname + "...");
 						ProcessesInterop.StartAndWaitProcessRedirectOutput(
 							new ProcessStartInfo(
-								TortoiseProcInterop.svnPath,
+								TortoiseProcInterop.cSvnPath,
 								"update " + TortoiseProcInterop.GetExtraSvnParams() + " \"" + Path.GetDirectoryName(buildapp.SolutionFullpath) + "\""),
 							(sn, o) => { WriteOutput(o); },
 							(sn, er) => { WriteError(er); },
@@ -307,7 +307,7 @@ namespace BuildTestSystem
 						WriteOutput("Commiting, message = " + commitMsg);
 						ProcessesInterop.StartAndWaitProcessRedirectOutput(
 							new ProcessStartInfo(
-								TortoiseProcInterop.svnPath,
+								TortoiseProcInterop.cSvnPath,
 								"commit -m\"" + commitMsg + "\" " + TortoiseProcInterop.GetExtraSvnParams() + " \"" + Path.GetDirectoryName(buildapp.SolutionFullpath) + "\""),
 							(sn, o) => { WriteOutput(o); },
 							(sn, er) => { WriteError(er); },
