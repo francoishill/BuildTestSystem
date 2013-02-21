@@ -1025,8 +1025,6 @@ namespace BuildTestSystem
 
 		private void ContextmenuGitPush(object sender, RoutedEventArgs e)
 		{
-			//Figure out how to get committed but NOT PUSHED changes..
-
 			DoOperationWithApps(
 				   GetBuildAppList_FromContextMenu(sender),
 				   app =>
