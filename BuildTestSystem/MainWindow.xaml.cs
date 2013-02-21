@@ -97,7 +97,7 @@ namespace BuildTestSystem
 		}
 
 		private void DoOperationWithApps(IEnumerable<BuildApplication> appsList, Action<BuildApplication> actionOnEachApp,
-			string OperationDisplayName, string InitialStatusMessage,bool AllowConcurrent, 
+			string OperationDisplayName, string InitialStatusMessage, bool AllowConcurrent,
 			bool ClearAppStatusTextFirst, Predicate<BuildApplication> ShouldIncludeApp)
 		{
 			var settings = new VsBuildProject.OverallOperationSettings(
@@ -1023,6 +1023,20 @@ namespace BuildTestSystem
 			}*/
 		}
 
+		private void ContextmenuGitPushWithoutGui(object sender, RoutedEventArgs e)
+		{
+			var buildapps = GetBuildAppList_FromContextMenu(sender);
+
+			DoOperationWithApps(
+				buildapps,
+				(app) => app.PushWithoutGui(),
+				"Push (no GUI)",
+				"Busy pushing (no GUI) to default git remote, please be patient...",
+				true,
+				true,
+				(app) => ((BuildApplication)app).IsVersionControlled == true);
+		}
+
 		private void ContextmenuGitPush(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
@@ -1447,10 +1461,25 @@ namespace BuildTestSystem
 		checkForUpdatesAction(this);*/
 		}
 
+		private static FeedbackMessageTypes GetFeedbackMessageTypesFromTextFeedbackType(TextFeedbackType tft)
+		{
+			switch (tft)
+			{
+				case TextFeedbackType.Error:
+					return FeedbackMessageTypes.Error;
+				case TextFeedbackType.Success:
+					return FeedbackMessageTypes.Success;
+				case TextFeedbackType.Noteworthy:
+					return FeedbackMessageTypes.Status;//FeedbackMessageTypes.Warning;
+				case TextFeedbackType.Subtle:
+					return FeedbackMessageTypes.Status;
+			}
+			return FeedbackMessageTypes.Error;
+		}
+
 		public void CommitMessage(string commitMessage)
 		{
 			string changesText;
-			OnFeedbackMessage("Busy checking for subversion changes first", FeedbackMessageTypes.Status);
 			if (TortoiseProcInterop.CheckFolderGitChanges(this.GetSolutionDirectory(), out changesText))
 			{
 				//we don't make use currently of the returned messages from the following method
@@ -1460,23 +1489,7 @@ namespace BuildTestSystem
 					GitInterop.GitCommand.Commit,
 					(sn, ev) =>
 					{
-						FeedbackMessageTypes fbt = FeedbackMessageTypes.Status;
-						switch (ev.FeedbackType)
-						{
-							case TextFeedbackType.Error:
-								fbt = FeedbackMessageTypes.Error;
-								break;
-							case TextFeedbackType.Success:
-								fbt = FeedbackMessageTypes.Success;
-								break;
-							case TextFeedbackType.Noteworthy:
-								fbt = FeedbackMessageTypes.Status;//FeedbackMessageTypes.Warning;
-								break;
-							case TextFeedbackType.Subtle:
-								fbt = FeedbackMessageTypes.Status;
-								break;
-						}
-						OnFeedbackMessage(ev.FeedbackText, fbt);
+						OnFeedbackMessage(ev.FeedbackText, GetFeedbackMessageTypesFromTextFeedbackType(ev.FeedbackType));
 					});
 
 				if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
@@ -1485,7 +1498,20 @@ namespace BuildTestSystem
 					OnFeedbackMessage(null, FeedbackMessageTypes.Success);
 			}
 			else
-				OnFeedbackMessage("Application had no subversion changes", FeedbackMessageTypes.Warning);
+				OnFeedbackMessage("Application had no git changes", FeedbackMessageTypes.Warning);
+		}
+
+		public void PushWithoutGui()
+		{
+			//we don't make use currently of the returned messages from the following method
+			GitInterop.PerformGitCommand(
+				null,
+				string.Format("{0}", this.GetSolutionDirectory()),
+				GitInterop.GitCommand.Push,
+				(sn, ev) =>
+				{
+					OnFeedbackMessage(ev.FeedbackText, GetFeedbackMessageTypesFromTextFeedbackType(ev.FeedbackType));
+				});
 		}
 	}
 

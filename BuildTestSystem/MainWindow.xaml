@@ -374,7 +374,9 @@
                                                   Click='ContextmenuGitCommitLocallySameMessage' />
                                         <MenuItem Header='Commit locally'
                                                   Click='ContextmenuGitCommitLocallyChanges' />
-                                        <MenuItem Header='Push (default remote)'
+                                        <MenuItem Header='Push (without GUI to default remote)'
+                                                  Click='ContextmenuGitPushWithoutGui' />
+                                        <MenuItem Header='Push (GUI)'
                                                   Click='ContextmenuGitPush' />
                                         <!--Visibility='{Binding IsInstalled,Mode=OneWay,Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=opposite}'/>-->
                                     </MenuItem>
