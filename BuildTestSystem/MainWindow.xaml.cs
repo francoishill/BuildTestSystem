@@ -1032,7 +1032,7 @@ namespace BuildTestSystem
 				(app) => app.PushWithoutGui(),
 				"Push (no GUI)",
 				"Busy pushing (no GUI) to default git remote, please be patient...",
-				true,
+				false,//true, We need the Environment.CurrentDirectory, so we cannot run concurrent
 				true,
 				(app) => ((BuildApplication)app).IsVersionControlled == true);
 		}
@@ -1483,14 +1483,23 @@ namespace BuildTestSystem
 			if (TortoiseProcInterop.CheckFolderGitChanges(this.GetSolutionDirectory(), out changesText))
 			{
 				//we don't make use currently of the returned messages from the following method
-				GitInterop.PerformGitCommand(
-					null,
-					string.Format("{0};{1}", this.GetSolutionDirectory(), commitMessage),
+				string errorIfFailed;
+				List<string> outputs, errors;
+				bool? runsuccess = GitInterop.PerformGitCommand(
+					this.GetSolutionDirectory(),
 					GitInterop.GitCommand.Commit,
-					(sn, ev) =>
-					{
-						OnFeedbackMessage(ev.FeedbackText, GetFeedbackMessageTypesFromTextFeedbackType(ev.FeedbackType));
-					});
+					out errorIfFailed,
+					out outputs,
+					out errors,
+					commitMessage);
+
+				if (runsuccess != true)
+				{
+					if (errorIfFailed != null)
+						OnFeedbackMessage(errorIfFailed, FeedbackMessageTypes.Error);
+					else
+						OnFeedbackMessage(string.Join(Environment.NewLine, outputs.Concat(errors)), FeedbackMessageTypes.Warning);
+				}
 
 				if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
 					OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
@@ -1504,14 +1513,26 @@ namespace BuildTestSystem
 		public void PushWithoutGui()
 		{
 			//we don't make use currently of the returned messages from the following method
-			GitInterop.PerformGitCommand(
-				null,
-				string.Format("{0}", this.GetSolutionDirectory()),
+			string errorIfFailed;
+			List<string> outputs, errors;
+			bool? runsuccess = GitInterop.PerformGitCommand(
+				this.GetSolutionDirectory(),
 				GitInterop.GitCommand.Push,
-				(sn, ev) =>
-				{
-					OnFeedbackMessage(ev.FeedbackText, GetFeedbackMessageTypesFromTextFeedbackType(ev.FeedbackType));
-				});
+				out errorIfFailed,
+				out outputs,
+				out errors,
+				this.ApplicationName);//Remote name
+
+			if (runsuccess != true)
+			{
+				if (errorIfFailed != null)
+					OnFeedbackMessage(errorIfFailed, FeedbackMessageTypes.Error);
+				else if (errors != null
+					&& errors.Last().Trim().Equals("Everything up-to-date", StringComparison.InvariantCultureIgnoreCase))
+					OnFeedbackMessage(string.Join(Environment.NewLine, "...", "Everything up-to-date"), FeedbackMessageTypes.Success);
+				else
+					OnFeedbackMessage(string.Join(Environment.NewLine, outputs.Concat(errors)), FeedbackMessageTypes.Warning);
+			}
 		}
 	}
 
