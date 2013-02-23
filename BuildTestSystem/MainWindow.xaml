@@ -185,6 +185,8 @@
                         VerticalAlignment='Top'
                         HorizontalAlignment='Right'>
                 <TextBlock Name='textblockSelectedCount'
+                           FontSize='10'
+                           TextAlignment='Center'
                            Foreground='#aaa'
                            VerticalAlignment='Center' />
                 <Button Name='buttonSelectAll'

@@ -262,10 +262,11 @@ namespace BuildTestSystem
 						}
 						else if (pn.PropertyName.Equals("CurrentStatus", StringComparison.InvariantCultureIgnoreCase))
 						{
-							if (_lastUsedPredicateForShowingApps != null)
 								Dispatcher.BeginInvoke((Action)delegate
 								{
-									ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
+									UpdateControlsAffectedBySelection();
+									if (_lastUsedPredicateForShowingApps != null)
+										ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
 									this.UpdateLayout();
 								});
 						}
@@ -303,7 +304,27 @@ namespace BuildTestSystem
 				&& invisibleCount == 0
 				? Visibility.Visible
 				: Visibility.Hidden;
-			textblockSelectedCount.Text = string.Format("{0} visible, {1} selected, {2} total", GetVisibleAppCount(), selectedCount, listOfApplications.Count);
+
+			List<string> statusCounts = new List<string>();
+			try
+			{
+				foreach (BuildApplication.StatusTypes statusType in Enum.GetValues(typeof(BuildApplication.StatusTypes)))
+					statusCounts.Add(
+						string.Format("{0} {1}",
+						listOfApplications.Count(a => a.CurrentStatus == statusType), statusType.ToString()));
+
+					textblockSelectedCount.Text = string.Format(
+						"{0} Visible, {1} Selected, {2} Total\r\n{3}",
+						GetVisibleAppCount(),
+						selectedCount, 
+						listOfApplications.Count, 
+						string.Join(", ", statusCounts));
+
+			}
+			finally
+			{
+				statusCounts.Clear(); statusCounts = null;
+			}
 		}
 
 		private void buttonBuildAll_Click(object sender, RoutedEventArgs e)
