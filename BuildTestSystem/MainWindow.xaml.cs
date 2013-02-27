@@ -901,8 +901,8 @@ namespace BuildTestSystem
 			DoOperationWithApps(
 				GetBuildAppList_FromContextMenu(sender),
 				app => app.CheckForGitChanges(false),
-				"Checking subversion changes",
-				"Starting to check for subversion changes.",
+				"Checking git changes",
+				"Starting to check for git changes.",
 				true,
 				true,
 				app => app.IsVersionControlled == true);
@@ -927,8 +927,8 @@ namespace BuildTestSystem
 						.WaitForExit();
 					app.CheckForGitChanges(false);
 				},
-				"Show subversion udpates dialog",
-				"Starting to show subversion updates dialog.",
+				"Show git udpates dialog",
+				"Starting to show git updates dialog.",
 				true,
 				true,
 				app => app.IsVersionControlled == true);
@@ -963,8 +963,8 @@ namespace BuildTestSystem
 						.WaitForExit();
 					app.CheckForGitChanges(false);
 				},
-				"Show subversion log",
-				"Starting to show subversion log.",
+				"Show git log",
+				"Starting to show git log.",
 				true,
 				true,
 				app => app.IsVersionControlled == true);
@@ -1018,8 +1018,8 @@ namespace BuildTestSystem
 						.WaitForExit();
 					app.CheckForGitChanges(false);
 				},
-				"Show subversion commit dialog",
-				"Starting to show subversion commit dialog.",
+				"Show git commit dialog",
+				"Starting to show git commit dialog.",
 				true,
 				true,
 				app => app.IsVersionControlled == true);
@@ -1070,8 +1070,8 @@ namespace BuildTestSystem
 						   .WaitForExit();
 					   app.CheckForGitChanges(false);
 				   },
-				   "Show subversion commit dialog",
-				   "Starting to show subversion commit dialog.",
+				   "Show git commit dialog",
+				   "Starting to show git commit dialog.",
 				   true,
 				   true,
 				   app => app.IsVersionControlled == true);
@@ -1523,7 +1523,8 @@ namespace BuildTestSystem
 						OnFeedbackMessage(string.Join(Environment.NewLine, outputs.Concat(errors)), FeedbackMessageTypes.Warning);
 				}
 
-				if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
+				//if (TortoiseProcInterop.CheckFolderSubversionChanges(this.GetSolutionDirectory(), out changesText))
+				if (TortoiseProcInterop.CheckFolderGitChanges(this.GetSolutionDirectory(), out changesText))
 					OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
 				else
 					OnFeedbackMessage(null, FeedbackMessageTypes.Success);
