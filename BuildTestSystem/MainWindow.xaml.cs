@@ -991,7 +991,7 @@ namespace BuildTestSystem
 
 		private void ContextmenuGitCommitLocallySameMessage(object sender, RoutedEventArgs e)
 		{
-			var msg = InputBoxWPF.Prompt("Please enter the subversion commit message to be used for all", "Common commit message");
+			var msg = InputBoxWPF.Prompt("Please enter the git commit message to be used for all", "Common commit message");
 			if (msg == null) return;
 
 			var buildapps = GetBuildAppList_FromContextMenu(sender);
@@ -999,9 +999,9 @@ namespace BuildTestSystem
 			DoOperationWithApps(
 				buildapps,
 				(app) => app.CommitMessage(msg),
-				"Commit same subversion message",
-				"Busy committing subversion message, please be patient...",
-				true,
+				"Commit same git message",
+				"Busy committing git message, please be patient...",
+				false,
 				true,
 				(app) => ((BuildApplication)app).IsVersionControlled == true);
 		}
