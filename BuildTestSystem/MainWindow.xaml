@@ -330,7 +330,6 @@
                 <TreeView.ItemTemplate>
                     <DataTemplate>
                         <Border Name='borderMainItemBorder'
-                                Background='{Binding CurrentStatus, Converter={StaticResource statusTypeToBrushConverter}}'
                                 BorderThickness='1'
                                 BorderBrush='#44888888'
                                 Margin='0 15 30 15'
@@ -393,7 +392,30 @@
 									</MenuItem>-->
                                 </ContextMenu>
                             </Border.ContextMenu>
-                            <DockPanel LastChildFill='True'
+                            <DockPanel LastChildFill='True'>
+                                <DockPanel.Resources>
+                                    <LinearGradientBrush x:Key='statusColorBar'
+                                                         StartPoint='0,0'
+                                                         EndPoint='1,0'>
+                                        <GradientStop Offset='0'
+                                                      Color='Transparent' />
+                                        <GradientStop Offset='0.3'
+                                                      Color='{Binding CurrentStatus, Converter={StaticResource statusTypeToBrushConverter}}' />
+                                        <GradientStop Offset='0.7'
+                                                      Color='{Binding CurrentStatus, Converter={StaticResource statusTypeToBrushConverter}}' />
+                                        <GradientStop Offset='1'
+                                                      Color='Transparent' />
+                                    </LinearGradientBrush>
+                                </DockPanel.Resources>
+                                <Border DockPanel.Dock='Left'
+                                        CornerRadius='4'
+                                        Width='8'
+                                        Background='{StaticResource statusColorBar}'/>
+                                <Border DockPanel.Dock='Right'
+                                        CornerRadius='4'
+                                        Width='8'
+                                        Background='{StaticResource statusColorBar}' />
+                                <DockPanel LastChildFill='True'
                                        MaxWidth='800'>
                                 <StackPanel Orientation='Vertical'>
                                     <ProgressBar Height='10'
@@ -432,15 +454,37 @@
                                                   Visibility='{Binding IsSelected, Converter={StaticResource booleanToVisibilityConverter},ConverterParameter=HideInsteadOfCollapse}' />
                                     </StackPanel>
                                 </StackPanel>
-                                <Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>
-                                    <TextBox Text='{Binding CurrentStatusText, Mode=OneWay}'
-                                             ScrollViewer.CanContentScroll='True'
-                                             ScrollViewer.HorizontalScrollBarVisibility='Auto'
-                                             ScrollViewer.VerticalScrollBarVisibility='Auto'
-                                             MaxHeight='300'
-                                             FontSize='9'
-                                             IsReadOnly='True' />
-                                </Expander>
+                                <!--<Expander IsExpanded='{Binding HasFeedbackText, Mode=OneWay}'>-->
+                                <Expander>
+                                        <Border CornerRadius='3' Padding='3'>
+                                            <Border.Background>
+                                                <LinearGradientBrush StartPoint='0,0'
+                                                                     EndPoint='0,1'>
+                                                    <GradientStop Offset='0'
+                                                                  Color='#000' />
+                                                    <GradientStop Offset='0.3'
+                                                                  Color='#222' />
+                                                    <GradientStop Offset='0.5'
+                                                                  Color='#333' />
+                                                    <GradientStop Offset='0.7'
+                                                                  Color='#222' />
+                                                    <GradientStop Offset='1'
+                                                                  Color='#000' />
+                                                </LinearGradientBrush>
+                                            </Border.Background>
+                                            <TextBox Text='{Binding CurrentStatusText, Mode=OneWay}'
+                                                     ScrollViewer.CanContentScroll='True'
+                                                     ScrollViewer.HorizontalScrollBarVisibility='Auto'
+                                                     ScrollViewer.VerticalScrollBarVisibility='Auto'
+                                                     MaxHeight='300'
+                                                     FontSize='9'
+                                                     BorderThickness='0'
+                                                     Background='Transparent'
+                                                     Foreground='White'
+                                                     IsReadOnly='True' />
+                                        </Border>
+                                    </Expander>
+                            </DockPanel>
                             </DockPanel>
                         </Border>
                         <DataTemplate.Triggers>

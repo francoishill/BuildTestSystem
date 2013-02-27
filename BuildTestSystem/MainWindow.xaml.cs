@@ -1276,8 +1276,9 @@ namespace BuildTestSystem
 		private string _applicationname;
 		public override string ApplicationName { get { return _applicationname; } set { _applicationname = value; OnPropertyChanged("ApplicationName"); } }
 		private string _currentstatustext;
-		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } protected set { _currentstatustext = value; OnPropertyChanged("CurrentStatusText", "HasFeedbackText"); } }
-		public override bool HasFeedbackText { get { return !string.IsNullOrWhiteSpace(CurrentStatusText); } }
+		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } protected set { _currentstatustext = value; OnPropertyChanged("CurrentStatusText"); } }/*, "HasFeedbackText"); } }
+		public override bool HasFeedbackText { get { return !string.IsNullOrWhiteSpace(CurrentStatusText); } }*/
+
 		/*private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }*/
 		private StatusTypes _currentStatus;
@@ -1560,7 +1561,7 @@ namespace BuildTestSystem
 	public class StatusTypeToBrushConverter : IValueConverter
 	//public class BoolToBrushConverter : IValueConverter
 	{
-		private static readonly GradientStopCollection QueuedColorStops =
+		/*private static readonly GradientStopCollection QueuedColorStops =
             new GradientStopCollection(new GradientStop[]
  			{
 				new GradientStop(Color.FromArgb(30, 130, 130, 130), 0),
@@ -1584,9 +1585,9 @@ namespace BuildTestSystem
 		private static readonly GradientStopCollection ErrorColorStops =
             new GradientStopCollection(new GradientStop[]
 			{
-				new GradientStop(Color.FromArgb(20, 130, 0, 0), 0),
-				new GradientStop(Color.FromArgb(40, 180, 0, 0), 0.7),
-				new GradientStop(Color.FromArgb(20, 130, 0, 0), 1)
+				new GradientStop(Color.FromArgb(60, 130, 0, 0), 1),
+				new GradientStop(Color.FromArgb(0, 180, 0, 0), 0.2),
+				new GradientStop(Color.FromArgb(60, 130, 0, 0), 1)
 			});
 		private static readonly GradientStopCollection WarningColorStops =
             new GradientStopCollection(new GradientStop[]
@@ -1594,32 +1595,32 @@ namespace BuildTestSystem
 				new GradientStop(Color.FromArgb(20, 130, 0, 230), 0),
 				new GradientStop(Color.FromArgb(40, 180, 0, 255), 0.7),
 				new GradientStop(Color.FromArgb(20, 130, 0, 230), 1)
-				/*new GradientStop(Color.FromArgb(20, 200, 150, 0), 0),
-				new GradientStop(Color.FromArgb(40, 240, 150, 0), 0.7),
-				new GradientStop(Color.FromArgb(20, 200, 150, 0), 1)*/
-			});
+				//new GradientStop(Color.FromArgb(20, 200, 150, 0), 0),
+				//new GradientStop(Color.FromArgb(40, 240, 150, 0), 0.7),
+				//new GradientStop(Color.FromArgb(20, 200, 150, 0), 1)
+			});*/
 
 		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
 			if (!(value is BuildApplication.StatusTypes))
-				return Brushes.Yellow;
+				return Colors.Gold;
 
 			switch ((BuildApplication.StatusTypes)value)
 			{
 				case BuildApplication.StatusTypes.Normal:
-					return Brushes.Transparent;
+					return Colors.Transparent;
 				case VsBuildProject.StatusTypes.Queued:
-					return new LinearGradientBrush(QueuedColorStops, new Point(0, 0), new Point(0, 1));
+					return Colors.Gray;//new LinearGradientBrush(QueuedColorStops, new Point(0, 0), new Point(1, 0));
 				case VsBuildProject.StatusTypes.Busy:
-					return new LinearGradientBrush(BusyColorStops, new Point(0, 0), new Point(0, 1));
+					return Colors.Gold;//new LinearGradientBrush(BusyColorStops, new Point(0, 0), new Point(1, 0));
 				case BuildApplication.StatusTypes.Success:
-					return new LinearGradientBrush(SuccessColorStops, new Point(0, 0), new Point(0, 1));
+					return Colors.Green;//new LinearGradientBrush(SuccessColorStops, new Point(0, 0), new Point(1, 0));
 				case BuildApplication.StatusTypes.Error:
-					return new LinearGradientBrush(ErrorColorStops, new Point(0, 0), new Point(0, 1));
+					return Colors.Red;//new LinearGradientBrush(ErrorColorStops, new Point(0, 0), new Point(1, 0));
 				case BuildApplication.StatusTypes.Warning:
-					return new LinearGradientBrush(WarningColorStops, new Point(0, 0), new Point(0, 1));
+					return Colors.Orange;//new LinearGradientBrush(WarningColorStops, new Point(0, 0), new Point(1, 0));
 				default:
-					return Brushes.Transparent;
+					return Colors.Transparent;
 			}
 
 			/*if (!(value is bool?) && value != null)//If null we assume its a null bool?
