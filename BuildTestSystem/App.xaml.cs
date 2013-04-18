@@ -77,6 +77,9 @@ namespace BuildTestSystem
 
 		protected override void OnStartup(StartupEventArgs e)
 		{
+			//SharedClasses.ResourceUsageTracker.ShowResourceUsageChart();
+			//return;
+
 			//SharedClasses.HighResourceUsageWindow.ShowHighResourceUsageWindowReturnResult(
 			//	"Message",
 			//	"Current time is " + DateTime.Now.ToString("HH:mm:ss"));

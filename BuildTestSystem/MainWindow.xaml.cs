@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -100,6 +101,8 @@ namespace BuildTestSystem
 			string OperationDisplayName, string InitialStatusMessage, bool AllowConcurrent,
 			bool ClearAppStatusTextFirst, Predicate<BuildApplication> ShouldIncludeApp)
 		{
+			ResourceUsageTracker.LogStartOfOperationInApplication(OperationDisplayName);
+
 			var settings = new VsBuildProject.OverallOperationSettings(
 				   OperationDisplayName,
 				   InitialStatusMessage,
@@ -262,13 +265,13 @@ namespace BuildTestSystem
 						}
 						else if (pn.PropertyName.Equals("CurrentStatus", StringComparison.InvariantCultureIgnoreCase))
 						{
-								Dispatcher.BeginInvoke((Action)delegate
-								{
-									UpdateControlsAffectedBySelection();
-									if (_lastUsedPredicateForShowingApps != null)
-										ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
-									this.UpdateLayout();
-								});
+							Dispatcher.BeginInvoke((Action)delegate
+							{
+								UpdateControlsAffectedBySelection();
+								if (_lastUsedPredicateForShowingApps != null)
+									ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
+								this.UpdateLayout();
+							});
 						}
 					};
 					listOfApplications.Add(newApp);
@@ -313,12 +316,12 @@ namespace BuildTestSystem
 						string.Format("{0} {1}",
 						listOfApplications.Count(a => a.CurrentStatus == statusType), statusType.ToString()));
 
-					textblockSelectedCount.Text = string.Format(
-						"{0} Visible, {1} Selected, {2} Total\r\n{3}",
-						GetVisibleAppCount(),
-						selectedCount, 
-						listOfApplications.Count, 
-						string.Join(", ", statusCounts));
+				textblockSelectedCount.Text = string.Format(
+					"{0} Visible, {1} Selected, {2} Total\r\n{3}",
+					GetVisibleAppCount(),
+					selectedCount,
+					listOfApplications.Count,
+					string.Join(", ", statusCounts));
 
 			}
 			finally
@@ -1269,29 +1272,48 @@ namespace BuildTestSystem
 			statusLabel.Text = null;
 			statusLabel.UpdateLayout();
 		}
+
+		private void buttonExpandSelected_Click(object sender, RoutedEventArgs e)
+		{
+			this.ForeachBuildapp(ba => { if (ba.IsSelected == true) ba.IsFeedbackExpanded = true; });
+		}
+
+		private void buttonCollapseSelected_Click(object sender, RoutedEventArgs e)
+		{
+			this.ForeachBuildapp(ba => { if (ba.IsSelected == true) ba.IsFeedbackExpanded = false; });
+		}
 	}
 
 	public class BuildApplication : VsBuildProject, INotifyPropertyChanged
 	{
 		private string _applicationname;
-		public override string ApplicationName { get { return _applicationname; } set { _applicationname = value; OnPropertyChanged("ApplicationName"); } }
+		public override string ApplicationName { get { return _applicationname; } set { _applicationname = value; OnPropertyChanged(ba => ba.ApplicationName); } }
 		private string _currentstatustext;
-		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } protected set { _currentstatustext = value; OnPropertyChanged("CurrentStatusText"); } }/*, "HasFeedbackText"); } }
+		public override string CurrentStatusText { get { return _currentstatustext ?? ""; } protected set { _currentstatustext = value; OnPropertyChanged(ba => ba.CurrentStatusText); } }/*, "HasFeedbackText"); } }
 		public override bool HasFeedbackText { get { return !string.IsNullOrWhiteSpace(CurrentStatusText); } }*/
 
 		/*private bool? _lastbuildresult;
 		public override bool? LastBuildResult { get { return _lastbuildresult; } set { _lastbuildresult = value; OnPropertyChanged("LastBuildResult"); } }*/
 		private StatusTypes _currentStatus;
-		public override StatusTypes CurrentStatus { get { return _currentStatus; } set { _currentStatus = value; OnPropertyChanged("CurrentStatus"); } }
+		public override StatusTypes CurrentStatus { get { return _currentStatus; } set { _currentStatus = value; OnPropertyChanged(ba => ba.CurrentStatus); } }
+
+		private string _lasterror;
+		public override string LastError { get { return _lasterror; } set { _lasterror = value; OnPropertyChanged(ba => ba.LastError); } }
+
+		private string _lastsuccess;
+		public override string LastSuccess { get { return _lastsuccess; } set { _lastsuccess = value; OnPropertyChanged(ba => ba.LastSuccess); } }
 
 		public bool? IsInstalled { get { return PublishInterop.IsInstalled(this.ApplicationName); } }
 		public bool? IsVersionControlled { get { return OwnAppsInterop.DirIsValidGitPath(Path.GetDirectoryName(this.SolutionFullpath)); } }
 
 		private bool? _isselected;
-		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged("IsSelected"); } }
+		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged(ba => ba.IsSelected); } }
 
 		private int? _currentprogressPprcentage;
-		public override int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged("CurrentProgressPercentage"); } }
+		public override int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged(ba => ba.CurrentProgressPercentage); } }
+
+		private bool _isfeedbackexpanded;
+		public bool IsFeedbackExpanded { get { return _isfeedbackexpanded; } set { _isfeedbackexpanded = value; OnPropertyChanged(ba => ba.IsFeedbackExpanded); } }
 
 		private string ApplicationIconPath { get; set; }
 
@@ -1327,7 +1349,16 @@ namespace BuildTestSystem
 		}
 
 		public event PropertyChangedEventHandler PropertyChanged = new PropertyChangedEventHandler(delegate { });
-		private void OnPropertyChanged(params string[] propertyNames) { foreach (var pn in propertyNames) PropertyChanged(this, new PropertyChangedEventArgs(pn)); }
+		private void OnPropertyChanged(params Expression<Func<BuildApplication, object>>[] propertiesOrFieldsAsExpressions)
+		{
+			ReflectionInterop.DoForeachPropertOrField<BuildApplication>(
+				this,
+				propertiesOrFieldsAsExpressions,
+				(instanceObj, memberInfo, memberValue) =>
+				{
+					PropertyChanged(instanceObj, new PropertyChangedEventArgs(memberInfo.Name));
+				});
+		}
 
 		private static bool _isbusyBuilding = false;
 		public static bool IsBusyBuilding(bool showErrorIfBusy = true)
@@ -1430,7 +1461,7 @@ namespace BuildTestSystem
 					if (TortoiseProcInterop.CheckFolderGitChanges(Path.GetDirectoryName(this.SolutionFullpath), out changesText))
 						OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
 					else
-						OnFeedbackMessage(null, FeedbackMessageTypes.Success);//buildApplication.CurrentStatus = BuildApplication.StatusTypes.Success;
+						OnFeedbackMessage("No changes.", FeedbackMessageTypes.Success);//buildApplication.CurrentStatus = BuildApplication.StatusTypes.Success;
 
 					buildApplication.MarkAsComplete();
 				};
@@ -1644,7 +1675,7 @@ namespace BuildTestSystem
 		}
 	}
 
-	public class BoolToOpacityConverter : IValueConverter
+	/*public class BoolToOpacityConverter : IValueConverter
 	{
 		public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
 		{
@@ -1664,7 +1695,7 @@ namespace BuildTestSystem
 		{
 			throw new NotImplementedException();
 		}
-	}
+	}*/
 
 	public class NullableIntToIntConverter : IValueConverter
 	{
