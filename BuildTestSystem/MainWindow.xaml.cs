@@ -15,6 +15,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shell;
+using System.Windows.Threading;
 using SharedClasses;
 
 namespace BuildTestSystem
@@ -261,17 +262,21 @@ namespace BuildTestSystem
 					{
 						if (pn.PropertyName.Equals("IsSelected", StringComparison.InvariantCultureIgnoreCase))
 						{
-							UpdateControlsAffectedBySelection();
+							if (!isPausedEventsToUpdateControls)
+								UpdateControlsAffectedBySelection();
 						}
 						else if (pn.PropertyName.Equals("CurrentStatus", StringComparison.InvariantCultureIgnoreCase))
 						{
-							Dispatcher.BeginInvoke((Action)delegate
+							if (!isPausedEventsToUpdateControls)
 							{
-								UpdateControlsAffectedBySelection();
-								if (_lastUsedPredicateForShowingApps != null)
-									ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
-								this.UpdateLayout();
-							});
+								Dispatcher.BeginInvoke((Action)delegate
+								{
+									UpdateControlsAffectedBySelection();
+									if (_lastUsedPredicateForShowingApps != null)
+										ShowApplicationsBasedOnPredicate(_lastUsedPredicateForShowingApps);
+									this.UpdateLayout();
+								});
+							}
 						}
 					};
 					listOfApplications.Add(newApp);
@@ -1127,23 +1132,59 @@ namespace BuildTestSystem
 			});
 		}
 
-		private Predicate<BuildApplication> _lastUsedPredicateForShowingApps = null;
-		private void ShowApplicationsBasedOnPredicate(Predicate<BuildApplication> predicate)
+		private bool isPausedEventsToUpdateControls = false;
+		private void PauseEventsToUpdateControls(Action action)
 		{
-			if (predicate == null)
-				return;
-			_lastUsedPredicateForShowingApps = predicate;
+			isPausedEventsToUpdateControls = true;
+			try { action(); }
+			finally { isPausedEventsToUpdateControls = false; }
+		}
 
-			ForeachBuildappBorder((ba, border) =>
+		private Predicate<BuildApplication> _lastUsedPredicateForShowingApps = null;
+		private bool busyFilteringVisibleApps = false;
+		private void ShowApplicationsBasedOnPredicate(Predicate<BuildApplication> predicate, bool savePredicateForAutoRecalculation = true)
+		{
+			if (busyFilteringVisibleApps)
 			{
-				ba.IsSelected = false;//Unselect all when visibility changes
-				if (predicate(ba))
-					border.Visibility = System.Windows.Visibility.Visible;
+				UserMessages.ShowWarningMessage("Already busy filtering, please wait..");
+				return;
+			}
+			busyFilteringVisibleApps = true;
+
+			//SetWindowProgressState(TaskbarItemProgressState.Normal);
+			//int doneCount = 0;
+			//int totalCount = tmpMainTreeview.Items.Count;
+			//SetWindowProgressValue(doneCount / totalCount);
+
+			try
+			{
+				if (predicate == null)
+					return;
+				if (savePredicateForAutoRecalculation)
+					_lastUsedPredicateForShowingApps = predicate;
 				else
-					border.Visibility = System.Windows.Visibility.Collapsed;
-			});
-			tmpMainTreeview.UpdateLayout();
-			UpdateControlsAffectedBySelection();
+					_lastUsedPredicateForShowingApps = null;
+
+				PauseEventsToUpdateControls(
+					delegate
+					{
+						ForeachBuildappBorder((ba, border) =>
+						{
+							ba.IsSelected = false;//Unselect all when visibility changes
+							ba.IsVisible = predicate(ba);
+							//SetWindowProgressValue(doneCount++ / totalCount);
+						});
+					});
+				tmpMainTreeview.UpdateLayout();
+				//UpdateControlsAffectedBySelection();
+
+			}
+			finally
+			{
+				busyFilteringVisibleApps = false;
+				//SetWindowProgressState(TaskbarItemProgressState.None);
+				//SetWindowProgressValue(0.0);
+			}
 		}
 
 		private void RadioButtonShowAllClick(object sender, RoutedEventArgs e)
@@ -1224,6 +1265,21 @@ namespace BuildTestSystem
 		private void RadioButtonShowUnversioncontrolledClick(object sender, RoutedEventArgs e)
 		{
 			ShowApplicationsBasedOnPredicate(ba => ba.IsVersionControlled != true);
+		}
+
+		private void RadioButtonShowModifiedInPast24hours_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsModifiedInPast(TimeSpan.FromHours(24)), false);
+		}
+
+		private void RadioButtonShowModifiedInPast3days_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsModifiedInPast(TimeSpan.FromDays(3)), false);
+		}
+
+		private void RadioButtonShowModifiedInPast1week_Click(object sender, RoutedEventArgs e)
+		{
+			ShowApplicationsBasedOnPredicate(ba => ba.IsModifiedInPast(TimeSpan.FromDays(7)), false);
 		}
 
 		private void RadioButtonShowSelectedClick(object sender, RoutedEventArgs e)
@@ -1309,6 +1365,9 @@ namespace BuildTestSystem
 		private bool? _isselected;
 		public bool? IsSelected { get { return _isselected; } set { _isselected = value; OnPropertyChanged(ba => ba.IsSelected); } }
 
+		private bool? _isVisible;
+		public bool? IsVisible { get { return _isVisible; } set { _isVisible = value; OnPropertyChanged(ba => ba.IsVisible); } }
+
 		private int? _currentprogressPprcentage;
 		public override int? CurrentProgressPercentage { get { return _currentprogressPprcentage; } set { _currentprogressPprcentage = value; OnPropertyChanged(ba => ba.CurrentProgressPercentage); } }
 
@@ -1332,6 +1391,7 @@ namespace BuildTestSystem
 
 			this.CurrentProgressPercentage = 0;
 			this.IsSelected = false;
+			this.IsVisible = true;
 			this.ApplicationIconPath = OwnAppsInterop.GetAppIconPath(applicationName, out tmper);
 			if (this.ApplicationIconPath == null) OnFeedbackMessage(tmper, FeedbackMessageTypes.Error);
 		}
@@ -1586,6 +1646,32 @@ namespace BuildTestSystem
 					OnFeedbackMessage(string.Join(Environment.NewLine, "...", "Everything up-to-date"), FeedbackMessageTypes.Success);
 				else
 					OnFeedbackMessage(string.Join(Environment.NewLine, outputs.Concat(errors)), FeedbackMessageTypes.Warning);
+			}
+		}
+
+		public bool IsModifiedInPast(TimeSpan timeSpan)
+		{
+			var dir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			DateTime now = DateTime.Now;
+			var modFiles =
+				Directory.GetFiles(dir, "*.*", SearchOption.AllDirectories)
+				.Where(f =>
+					false == f.ToLower().Contains(@"\.git")
+					&& false == Path.GetExtension(f).Equals(".suo", StringComparison.InvariantCultureIgnoreCase)
+					&& now.Subtract(File.GetLastWriteTime(f)) <= timeSpan);//.Select(f => f.Substring(dir.Length));
+			if (modFiles.Count() > 0)
+			{
+				OnFeedbackMessage(
+					"There are files modified in the past: " + timeSpan.ToString() + Environment.NewLine
+						+ string.Join(Environment.NewLine, modFiles),
+					FeedbackMessageTypes.Warning);
+				return true;
+			}
+			else
+			{
+				OnFeedbackMessage("No files modified in the past: " + timeSpan.ToString(), FeedbackMessageTypes.Success);
+				return false;
 			}
 		}
 	}
