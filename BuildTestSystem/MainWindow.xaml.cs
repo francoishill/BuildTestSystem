@@ -1312,9 +1312,10 @@ namespace BuildTestSystem
 		private void ButtonSelectVisibleClick(object sender, RoutedEventArgs e)
 		{
 			foreach (var ba in listOfApplications)
-				if (_lastUsedPredicateForShowingApps == null
+				ba.IsSelected = ba.IsVisible;
+				/*if (_lastUsedPredicateForShowingApps == null
 					|| _lastUsedPredicateForShowingApps(ba))
-					ba.IsSelected = true;
+					ba.IsSelected = true;*/
 		}
 
 		private void ButtonUnselectAllClick(object sender, RoutedEventArgs e)
