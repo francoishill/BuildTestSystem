@@ -399,7 +399,10 @@
 												  Click='ContextmenuitemGetChangeLogsAllClick' />
 									</MenuItem>
 									<MenuItem Header='Git'>
-										<MenuItem Header='Status'
+                                        <MenuItem Header='Complete git repo sync (with GUI)'
+                                                  Click='ContextmenuCompleteGitRepoSyncChangeGUI' />
+                                        <Separator />
+                                        <MenuItem Header='Status'
 												  Click='ContextmenuCheckGitChanges' />
 										<MenuItem Header='Pull'
 												  Click='ContextmenuGitPull' />

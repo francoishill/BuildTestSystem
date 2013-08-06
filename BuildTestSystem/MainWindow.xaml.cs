@@ -904,6 +904,18 @@ namespace BuildTestSystem
 			false);
 		}
 
+		private void ContextmenuCompleteGitRepoSyncChangeGUI(object sender, RoutedEventArgs e)
+		{
+			DoOperationWithApps(
+				GetBuildAppList_FromContextMenu(sender),
+				app => app.CompleteGitRepoSyncWithGui(false),
+				"Complete sync of git repos with GUI",
+				"Starting to synchronize git repos with GUI.",
+				true,
+				true,
+				app => app.IsVersionControlled == true);
+		}
+
 		private void ContextmenuCheckGitChanges(object sender, RoutedEventArgs e)
 		{
 			DoOperationWithApps(
@@ -1313,9 +1325,9 @@ namespace BuildTestSystem
 		{
 			foreach (var ba in listOfApplications)
 				ba.IsSelected = ba.IsVisible;
-				/*if (_lastUsedPredicateForShowingApps == null
-					|| _lastUsedPredicateForShowingApps(ba))
-					ba.IsSelected = true;*/
+			/*if (_lastUsedPredicateForShowingApps == null
+				|| _lastUsedPredicateForShowingApps(ba))
+				ba.IsSelected = true;*/
 		}
 
 		private void ButtonUnselectAllClick(object sender, RoutedEventArgs e)
@@ -1508,6 +1520,73 @@ namespace BuildTestSystem
 			//},
 			//cspath,
 			//false);
+		}
+
+		public void CompleteGitRepoSyncWithGui(bool separateThread)
+		{
+			Action<BuildApplication> completeGitRepoSync =
+				(buildApplication) =>
+				{
+					buildApplication.ResetStatus(true);
+					buildApplication.MarkAsBusy();
+
+					try
+					{
+						string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+						//First check for local changes
+						string changesText;
+						bool hasLocalUncommittedChanges = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
+						if (hasLocalUncommittedChanges)
+							OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
+						else
+							OnFeedbackMessage("No changes.", FeedbackMessageTypes.Success);
+
+						//If there are local uncommitted changes, give user the chance to commit them
+						if (hasLocalUncommittedChanges
+							&& UserMessages.Confirm("There are local changes to " + buildApplication.ApplicationName + ", do you want to commit them now?"))
+						{
+							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Commit, solutionDir)
+								.WaitForExit();
+							hasLocalUncommittedChanges = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
+						}
+
+						//Use tortoise GUI to fetch the latest from the remote
+						TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Fetch, solutionDir)
+							.WaitForExit();
+
+						//Check to see if we are out of sync
+						bool tmpStatus = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText, false);
+						List<string> tmpLines = changesText.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+						if (tmpLines.Count > 2)//The first line is usually "# On branch master", and the last line "nothing to commit, working directory clean"
+						{//This means our repo is out of sync
+							tmpLines.RemoveAt(0);
+							tmpLines.RemoveAt(tmpLines.Count - 1);
+							OnFeedbackMessage(string.Join(Environment.NewLine, tmpLines), FeedbackMessageTypes.Status);
+
+							//Pull to merge remote into our local working copy
+							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Pull, solutionDir)
+								.WaitForExit();
+
+							//Push all our local commits/merges to remote repo
+							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Push, solutionDir)
+							   .WaitForExit();
+
+							//Last check for changes
+							TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
+						}
+						else
+							OnFeedbackMessage("Repos are completely in sync", FeedbackMessageTypes.Success);
+					}
+					finally
+					{
+						buildApplication.MarkAsComplete();
+					}
+				};
+			if (separateThread)
+				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(completeGitRepoSync, this, true);
+			else
+				completeGitRepoSync(this);
 		}
 
 		public void CheckForGitChanges(bool separateThread)
