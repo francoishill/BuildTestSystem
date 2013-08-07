@@ -943,8 +943,7 @@ namespace BuildTestSystem
 				GetBuildAppList_FromContextMenu(sender),
 				app =>
 				{
-					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Pull, app.GetSolutionDirectory())
-						.WaitForExit();
+					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Pull, app.GetSolutionDirectory(), true);
 					app.CheckForGitChanges(false);
 				},
 				"Show git udpates dialog",
@@ -963,8 +962,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Update, buildapp.GetSolutionDirectory());
-							p.WaitForExit();
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Update, buildapp.GetSolutionDirectory(), true);
 							b.CheckForSubversionChanges(false);
 						},
 						buildapp,
@@ -979,8 +977,7 @@ namespace BuildTestSystem
 				GetBuildAppList_FromContextMenu(sender),
 				app =>
 				{
-					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Log, app.GetSolutionDirectory())
-						.WaitForExit();
+					TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Log, app.GetSolutionDirectory(), true);
 					app.CheckForGitChanges(false);
 				},
 				"Show git log",
@@ -999,8 +996,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Log, buildapp.GetSolutionDirectory());
-							p.WaitForExit();
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Log, buildapp.GetSolutionDirectory(), true);
 							b.CheckForSubversionChanges(false);
 						},
 						buildapp,
@@ -1034,8 +1030,8 @@ namespace BuildTestSystem
 				{
 					TortoiseProcInterop.Git_StartTortoiseProc(
 						TortoiseProcInterop.TortoiseGitCommands.Commit,
-						app.GetSolutionDirectory())
-						.WaitForExit();
+						app.GetSolutionDirectory(),
+						true);
 					app.CheckForGitChanges(false);
 				},
 				"Show git commit dialog",
@@ -1054,8 +1050,7 @@ namespace BuildTestSystem
 					ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(
 						(b) =>
 						{
-							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Commit, buildapp.GetSolutionDirectory());
-							p.WaitForExit();
+							Process p = TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseSvnCommands.Commit, buildapp.GetSolutionDirectory(), true);
 							b.CheckForSubversionChanges(false);
 						},
 						buildapp,
@@ -1086,8 +1081,8 @@ namespace BuildTestSystem
 				   {
 					   TortoiseProcInterop.Git_StartTortoiseProc(
 						   TortoiseProcInterop.TortoiseGitCommands.Push,
-						   app.GetSolutionDirectory())
-						   .WaitForExit();
+						   app.GetSolutionDirectory(),
+						   true);
 					   app.CheckForGitChanges(false);
 				   },
 				   "Show git commit dialog",
@@ -1532,51 +1527,7 @@ namespace BuildTestSystem
 
 					try
 					{
-						string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
-
-						//First check for local changes
-						string changesText;
-						bool hasLocalUncommittedChanges = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
-						if (hasLocalUncommittedChanges)
-							OnFeedbackMessage(changesText, FeedbackMessageTypes.Warning);
-						else
-							OnFeedbackMessage("No changes.", FeedbackMessageTypes.Success);
-
-						//If there are local uncommitted changes, give user the chance to commit them
-						if (hasLocalUncommittedChanges
-							&& UserMessages.Confirm("There are local changes to " + buildApplication.ApplicationName + ", do you want to commit them now?"))
-						{
-							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Commit, solutionDir)
-								.WaitForExit();
-							hasLocalUncommittedChanges = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
-						}
-
-						//Use tortoise GUI to fetch the latest from the remote
-						TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Fetch, solutionDir)
-							.WaitForExit();
-
-						//Check to see if we are out of sync
-						bool tmpStatus = TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText, false);
-						List<string> tmpLines = changesText.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).ToList();
-						if (tmpLines.Count > 2)//The first line is usually "# On branch master", and the last line "nothing to commit, working directory clean"
-						{//This means our repo is out of sync
-							tmpLines.RemoveAt(0);
-							tmpLines.RemoveAt(tmpLines.Count - 1);
-							OnFeedbackMessage(string.Join(Environment.NewLine, tmpLines), FeedbackMessageTypes.Status);
-
-							//Pull to merge remote into our local working copy
-							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Pull, solutionDir)
-								.WaitForExit();
-
-							//Push all our local commits/merges to remote repo
-							TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Push, solutionDir)
-							   .WaitForExit();
-
-							//Last check for changes
-							TortoiseProcInterop.CheckFolderGitChanges(solutionDir, out changesText);
-						}
-						else
-							OnFeedbackMessage("Repos are completely in sync", FeedbackMessageTypes.Success);
+						buildApplication.CompleteGitRepoSync();
 					}
 					finally
 					{
@@ -1610,6 +1561,162 @@ namespace BuildTestSystem
 				ThreadingInterop.PerformOneArgFunctionSeperateThread<BuildApplication>(checkForGitChanges, this, true);
 			else
 				checkForGitChanges(this);
+		}
+
+		public bool GitHasLocalChanges_WithOutputLines(out bool hadError, out List<string> outputAndErrorsCombined, bool printChangesOrNoChanges)
+		{
+			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			string errorIfFailed;
+			List<string> outputs, errors;
+			bool? tmpGitStatus = GitInterop.PerformGitCommand(solutionDir, GitInterop.GitCommand.StatusShort, out errorIfFailed, out outputs, out errors);
+
+			if (tmpGitStatus == true)
+			{
+				if (printChangesOrNoChanges)
+					this.OnFeedbackMessage("No changes.", FeedbackMessageTypes.Success);
+				hadError = false;
+				outputAndErrorsCombined = null;
+				return false;
+			}
+			else if (tmpGitStatus == false)//error or could not run git.exe
+			{
+				this.OnFeedbackMessage("Error in running git status: " + errorIfFailed, FeedbackMessageTypes.Error);
+				hadError = true;
+				outputAndErrorsCombined = null;
+				return false;
+			}
+			else//Ran successfully but had output/error lines
+			{
+				if (printChangesOrNoChanges)
+					this.OnFeedbackMessage(string.Join(Environment.NewLine, outputs.Concat(errors)), FeedbackMessageTypes.Warning);
+				hadError = false;
+				outputAndErrorsCombined = outputs.Concat(errors).ToList();
+				return true;
+			}
+		}
+
+		public bool GitHasLocalChanges_TrueFalse(out bool hadError, bool printChangesOrNoChanges)
+		{
+			List<string> tmpList;
+			return GitHasLocalChanges_WithOutputLines(out hadError, out tmpList, printChangesOrNoChanges);
+		}
+
+		public bool GitFetch(out bool hadError)
+		{
+			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			string errorIfFailed;
+			List<string> outputs, errors;
+			bool? tmpGitStatus = GitInterop.PerformGitCommand(solutionDir, GitInterop.GitCommand.Fetch, out errorIfFailed, out outputs, out errors);
+
+			if (tmpGitStatus == true
+				|| tmpGitStatus == null)
+			{
+				hadError = false;
+				return false;
+			}
+			else// if (tmpGitStatus == false)//error or could not run git.exe
+			{
+				this.OnFeedbackMessage("Error in running git fetch: " + errorIfFailed, FeedbackMessageTypes.Error);
+				hadError = true;
+				return false;
+			}
+		}
+
+		public bool GitPull(out bool hadError)
+		{
+			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			string errorIfFailed;
+			List<string> outputs, errors;
+			bool? tmpGitStatus = GitInterop.PerformGitCommand(solutionDir, GitInterop.GitCommand.Pull, out errorIfFailed, out outputs, out errors);
+
+			if (tmpGitStatus == true
+				|| tmpGitStatus == null)
+			{
+				hadError = false;
+				return false;
+			}
+			else// if (tmpGitStatus == false)//error or could not run git.exe
+			{
+				this.OnFeedbackMessage("Error in running git pull: " + errorIfFailed, FeedbackMessageTypes.Error);
+				hadError = true;
+				return false;
+			}
+		}
+
+		public bool GitPush(out bool hadError)
+		{
+			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			string errorIfFailed;
+			List<string> outputs, errors;
+			bool? tmpGitStatus = GitInterop.PerformGitCommand(solutionDir, GitInterop.GitCommand.Push, out errorIfFailed, out outputs, out errors);
+
+			if (tmpGitStatus == true
+				|| tmpGitStatus == null)
+			{
+				hadError = false;
+				return false;
+			}
+			else// if (tmpGitStatus == false)//error or could not run git.exe
+			{
+				this.OnFeedbackMessage("Error in running git push: " + errorIfFailed, FeedbackMessageTypes.Error);
+				hadError = true;
+				return false;
+			}
+		}
+
+		public void CompleteGitRepoSync()
+		{
+			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
+
+			//First check for local changes
+			bool hadError;
+			bool hasLocalUncommittedChanges = GitHasLocalChanges_TrueFalse(out hadError, true);
+			if (hadError)
+				return;
+
+			//If there are local uncommitted changes, give user the chance to commit them
+			if (hasLocalUncommittedChanges
+				&& UserMessages.Confirm("There are local changes to " + this.ApplicationName + ", do you want to commit them now?"))
+			{
+				TortoiseProcInterop.Git_StartTortoiseProc(TortoiseProcInterop.TortoiseGitCommands.Commit, solutionDir, true);
+
+				hasLocalUncommittedChanges = GitHasLocalChanges_TrueFalse(out hadError, false);
+				if (hadError)
+					return;
+			}
+
+			GitFetch(out hadError);
+			if (hadError)
+				return;
+
+			List<string> outputAndErrorsCombined;
+			hasLocalUncommittedChanges = GitHasLocalChanges_WithOutputLines(out hadError, out outputAndErrorsCombined, false);
+			if (hadError)
+				return;
+
+			if (outputAndErrorsCombined != null
+				&& outputAndErrorsCombined.Count > 2)//The first line is usually "# On branch master", and the last line "nothing to commit, working directory clean"
+			{//This means our repo is out of sync
+				outputAndErrorsCombined.RemoveAt(0);
+				outputAndErrorsCombined.RemoveAt(outputAndErrorsCombined.Count - 1);
+				this.OnFeedbackMessage(string.Join(Environment.NewLine, outputAndErrorsCombined), FeedbackMessageTypes.Status);
+
+				GitPull(out hadError);
+				if (hadError)
+					return;
+
+				GitPush(out hadError);
+				if (hadError)
+					return;
+
+				GitHasLocalChanges_TrueFalse(out hadError, true);
+			}
+			else
+				this.OnFeedbackMessage("Repos are completely in sync.", FeedbackMessageTypes.Success);
 		}
 
 		public void CheckForUpdates(bool separateThread)
