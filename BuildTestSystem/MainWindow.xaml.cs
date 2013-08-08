@@ -1563,13 +1563,18 @@ namespace BuildTestSystem
 				checkForGitChanges(this);
 		}
 
-		public bool GitHasLocalChanges_WithOutputLines(out bool hadError, out List<string> outputAndErrorsCombined, bool printChangesOrNoChanges)
+		public bool GitHasLocalChanges_WithOutputLines(out bool hadError, out List<string> outputAndErrorsCombined, bool shortStatusOnly, bool printChangesOrNoChanges)
 		{
 			string solutionDir = Path.GetDirectoryName(this.SolutionFullpath);
 
 			string errorIfFailed;
 			List<string> outputs, errors;
-			bool? tmpGitStatus = GitInterop.PerformGitCommand(solutionDir, GitInterop.GitCommand.StatusShort, out errorIfFailed, out outputs, out errors);
+			bool? tmpGitStatus = GitInterop.PerformGitCommand(
+				solutionDir,
+				shortStatusOnly ? GitInterop.GitCommand.StatusShort : GitInterop.GitCommand.Status, 
+				out errorIfFailed, 
+				out outputs, 
+				out errors);
 
 			if (tmpGitStatus == true)
 			{
@@ -1599,7 +1604,7 @@ namespace BuildTestSystem
 		public bool GitHasLocalChanges_TrueFalse(out bool hadError, bool printChangesOrNoChanges)
 		{
 			List<string> tmpList;
-			return GitHasLocalChanges_WithOutputLines(out hadError, out tmpList, printChangesOrNoChanges);
+			return GitHasLocalChanges_WithOutputLines(out hadError, out tmpList, true, printChangesOrNoChanges);
 		}
 
 		public bool GitFetch(out bool hadError)
@@ -1694,7 +1699,7 @@ namespace BuildTestSystem
 				return;
 
 			List<string> outputAndErrorsCombined;
-			hasLocalUncommittedChanges = GitHasLocalChanges_WithOutputLines(out hadError, out outputAndErrorsCombined, false);
+			hasLocalUncommittedChanges = GitHasLocalChanges_WithOutputLines(out hadError, out outputAndErrorsCombined, false, false);
 			if (hadError)
 				return;
 
