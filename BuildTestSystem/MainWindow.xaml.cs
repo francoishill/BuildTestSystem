@@ -1401,7 +1401,7 @@ namespace BuildTestSystem
 			this.IsSelected = false;
 			this.IsVisible = true;
 			this.ApplicationIconPath = OwnAppsInterop.GetAppIconPath(applicationName, out tmper);
-			if (this.ApplicationIconPath == null) OnFeedbackMessage(tmper, FeedbackMessageTypes.Error);
+			if (this.ApplicationIconPath == null) OnFeedbackMessage(tmper, FeedbackMessageTypes.Warning);
 		}
 
 		public bool IsPartOfAnalysedList()
@@ -1483,11 +1483,23 @@ namespace BuildTestSystem
 
 		public void OpenInCSharpExpress()
 		{
-			var cspath = RegistryInterop.GetAppPathFromRegistry("VCSExpress.exe");
+			var cspath = RegistryInterop.GetAppPathFromRegistry("WDExpress.exe");
 			if (cspath == null)
 			{
-				UserMessages.ShowErrorMessage("Cannot obtain CSharp Express path from registry.");
-				return;
+				cspath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Microsoft Visual Studio 11.0\Common7\IDE\WDExpress.exe");
+				if (!File.Exists(cspath))
+				{
+					cspath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Microsoft Visual Studio 11.0\Common7\IDE\WDExpress.exe");
+					if (!File.Exists(cspath))
+					{
+						cspath = RegistryInterop.GetAppPathFromRegistry("VCSExpress.exe");
+						if (cspath == null)
+						{
+							UserMessages.ShowErrorMessage("Cannot obtain CSharp Express (2010 or 2012) path from registry or in Program Files or Program Files x86.");
+							return;
+						}
+					}
+				}
 			}
 
 			string csharpPath = cspath;
